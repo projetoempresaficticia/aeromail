@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="am-versao" content="c6278be8a35a" />
+  <meta name="am-versao" content="6b6113163015" />
   <title>AeroMail</title>
   <link rel="icon" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="web/biblioteca/am.css?v=7fdb817b" />
+  <link rel="stylesheet" href="web/biblioteca/am.css?v=1ced2268" />
 </head>
 <body>
 
@@ -83,6 +83,11 @@
           <span class="am-icone i-enviar" aria-hidden="true"></span>
           Enviados
         </button>
+        <button type="button" class="am-nav" data-caixa="lixo">
+          <span class="am-icone i-lixo" aria-hidden="true"></span>
+          Lixo
+          <span class="am-conta" id="conta-lixo"></span>
+        </button>
       </nav>
 
       <div class="am-empurra"></div>
@@ -104,10 +109,17 @@
       <div class="am-coluna-topo">
         <div class="am-fila" style="justify-content:space-between;margin-bottom:12px">
           <h2 id="titulo-caixa">Entrada</h2>
-          <label class="am-fila" style="gap:6px;font-size:12.5px;cursor:pointer">
+          <label class="am-fila" id="rotulo-por-ler"
+                 style="gap:6px;font-size:12.5px;cursor:pointer">
             <input type="checkbox" id="so-por-ler" /> Só por ler
           </label>
+          <button type="button" class="am-botao am-botao-linha" id="btn-esvaziar" hidden
+                  style="min-height:34px;padding:0 12px;font-size:13px">
+            <span class="am-icone am-icone-16 i-lixo" aria-hidden="true"></span>
+            Esvaziar o lixo
+          </button>
         </div>
+        <p class="am-msg" id="msg-geral"></p>
         <div class="am-campo am-busca" style="margin:0">
           <span class="lupa i-procurar" aria-hidden="true"></span>
           <label class="am-sobre" for="procura" style="position:absolute;left:-9999px">Procurar</label>
@@ -288,10 +300,34 @@
     </div>
   </dialog>
 
+  <!-- ══ CONFIRMAR ═════════════════════════════════════════════════════
+       Apagar de vez não tem volta. Uma janela nossa e não o confirm() do
+       browser: a seguir a um ecrã desenhado, uma caixa cinzenta do sistema
+       lê-se como um erro, e o que aqui é preciso é que se leia bem. -->
+  <dialog id="janela-confirmar" aria-labelledby="titulo-confirmar">
+    <div class="am-janela-cabeca">
+      <h2 id="titulo-confirmar">Apagar de vez?</h2>
+    </div>
+    <div class="am-janela-corpo">
+      <p id="texto-confirmar"></p>
+      <div class="am-nota" style="margin-top:16px">
+        <span class="am-icone am-icone-16 i-aviso" aria-hidden="true"></span>
+        <span id="aviso-confirmar">Isto não tem volta.</span>
+      </div>
+    </div>
+    <div class="am-janela-pe">
+      <button type="button" class="am-botao am-botao-linha"
+              data-fechar="janela-confirmar">Cancelar</button>
+      <button type="button" class="am-botao" id="btn-confirmar">
+        <span class="am-icone i-lixo" aria-hidden="true"></span>Apagar de vez
+      </button>
+    </div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://projetoempresaficticia.github.io/pp-base/web/comum.js"></script>
   <script src="web/biblioteca/am.js?v=5f271a58"></script>
   <script src="web/atualizar.js?v=aa6e1041"></script>
-  <script src="app.js?v=482cf848"></script>
+  <script src="app.js?v=7d03a3a2"></script>
 </body>
 </html>

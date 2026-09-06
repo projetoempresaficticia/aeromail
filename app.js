@@ -14,6 +14,8 @@ const areaApp = document.getElementById('area-app');
 const elLista = document.getElementById('lista');
 const elLeitura = document.getElementById('leitura');
 const elConta = document.getElementById('conta-por-ler');
+const elContaLixo = document.getElementById('conta-lixo');
+const msgGeral = document.getElementById('msg-geral');
 
 const estado = {
   eu: null,
@@ -32,21 +34,24 @@ function desenharLista() {
       estado.procura ? 'Nada corresponde a essa procura.'
       : estado.soPorLer ? 'Não há nada por ler.'
       : estado.caixa === 'enviados' ? 'Ainda não enviou nenhuma mensagem.'
+      : estado.caixa === 'lixo' ? 'O lixo está vazio.'
       : 'A caixa de entrada está vazia.'}</p>`;
     return;
   }
 
-  const naEntrada = estado.caixa === 'entrada';
+  const noLixo = estado.caixa === 'lixo';
   elLista.innerHTML = estado.linhas.map((m) => {
-    // Na entrada interessa quem escreveu; nos enviados, a quem se escreveu.
-    const ced = naEntrada ? m.de : m.para;
-    const nome = (naEntrada ? m.de_nome : m.para_nome) || ced;
-    const porLer = naEntrada && !m.lido;
-    const nAnexos = (m.anexos || []).length;
+    // Quem recebeu quer ver quem escreveu; quem enviou, a quem escreveu. No
+    // lixo cabem mensagens dos dois lados, por isso a resposta vem do
+    // servidor (`recebida`) e não da caixa que está aberta.
+    const ced = m.recebida ? m.de : m.para;
+    const nome = (m.recebida ? m.de_nome : m.para_nome) || ced;
+    const porLer = m.recebida && !m.lido && !noLixo;
+    const nAnexos = (m.anexos || []).filter((a) => !a.inline).length;
     return `
-      <button type="button" class="am-item" data-id="${esc(m.id)}"
-              data-por-ler="${porLer}"
-              ${m.id === estado.abertaId ? 'aria-current="true"' : ''}>
+      <div class="am-item" data-id="${esc(m.id)}" data-por-ler="${porLer}"
+           ${m.id === estado.abertaId ? 'aria-current="true"' : ''}>
+        <button type="button" class="am-item-abrir" data-abrir="${esc(m.id)}">
         ${avatar(ced, nome)}
         <span style="flex:1;min-width:0">
           <span class="am-fila" style="justify-content:space-between;gap:8px">
@@ -54,7 +59,7 @@ function desenharLista() {
             <span class="am-hora">${esc(horaCurta(m.criada_em))}</span>
           </span>
           <span class="am-assunto" style="display:block">
-            ${m.de_orgao && naEntrada
+            ${m.de_orgao && m.recebida
               ? '<span class="am-selo am-selo-orgao" style="margin-right:6px">Órgão</span>' : ''}
             ${esc(m.assunto)}
           </span>
@@ -64,19 +69,35 @@ function desenharLista() {
             ${esc(m.excerto || '')}
           </span>
         </span>
-      </button>`;
+        </button>
+        <button type="button" class="am-item-accao" data-arrumar="${esc(m.id)}"
+                data-destino="${noLixo ? 'caixa' : 'lixo'}"
+                data-repor="${noLixo}"
+                title="${noLixo ? 'Repor na caixa' : 'Apagar'}"
+                aria-label="${noLixo ? 'Repor' : 'Apagar'} — ${esc(m.assunto)}">
+          <span class="am-icone am-icone-16 ${noLixo ? 'i-voltar' : 'i-lixo'}"
+                aria-hidden="true"></span>
+        </button>
+      </div>`;
   }).join('');
 
-  elLista.querySelectorAll('.am-item').forEach((b) => {
-    b.addEventListener('click', () => abrir(b.dataset.id));
+  elLista.querySelectorAll('[data-abrir]').forEach((b) => {
+    b.addEventListener('click', () => abrir(b.dataset.abrir));
+  });
+  elLista.querySelectorAll('[data-arrumar]').forEach((b) => {
+    b.addEventListener('click', () => arrumar([b.dataset.arrumar], b.dataset.destino));
   });
 }
 
-function marcarConta(porLer) {
+function marcarConta(porLer, noLixo) {
   elConta.textContent = porLer > 0 ? String(porLer) : '';
+  if (noLixo !== undefined) {
+    elContaLixo.textContent = noLixo > 0 ? String(noLixo) : '';
+  }
 }
 
 async function carregar(manterAberta) {
+  mostrarMsg(msgGeral, '');
   const r = await api('correio_caixa', {
     p_caixa: estado.caixa,
     p_procura: estado.procura || null,
@@ -88,13 +109,99 @@ async function carregar(manterAberta) {
   }
   estado.eu = r.dados.eu;
   estado.linhas = r.dados.linhas;
-  marcarConta(r.dados.por_ler);
+  marcarConta(r.dados.por_ler, r.dados.no_lixo);
   if (!manterAberta) {
     estado.abertaId = null;
     limparLeitura();
   }
   desenharLista();
 }
+
+// ── arrumar: apagar, repor, apagar de vez ──────────────────────────
+// Três acções, uma função — no servidor também. Apagar não destrói: põe no
+// lixo, de onde se pode voltar. Só do lixo é que se destrói, e mesmo aí a
+// linha só desaparece quando o outro lado também já não a quer: a cópia de
+// quem recebeu não é minha para apagar.
+// Uma pergunta de sim ou não, com a janela do app. Devolve a resposta
+// como promessa para quem chama poder esperar por ela.
+function perguntar(texto, aviso) {
+  return new Promise((resolve) => {
+    const janela = document.getElementById('janela-confirmar');
+    document.getElementById('texto-confirmar').textContent = texto;
+    document.getElementById('aviso-confirmar').textContent =
+      aviso || 'Isto não tem volta.';
+
+    const btn = document.getElementById('btn-confirmar');
+    let respondido = false;
+
+    function fechar() {
+      janela.removeEventListener('close', aoFechar);
+      btn.removeEventListener('click', aoSim);
+    }
+    function aoSim() {
+      respondido = true;
+      fechar();
+      janela.close();
+      resolve(true);
+    }
+    function aoFechar() {
+      // Fechar pelo Escape, pelo Cancelar ou pelo fundo é sempre "não".
+      fechar();
+      if (!respondido) resolve(false);
+    }
+
+    btn.addEventListener('click', aoSim);
+    janela.addEventListener('close', aoFechar);
+    janela.showModal();
+  });
+}
+
+async function arrumar(ids, destino) {
+  if (!ids || !ids.length) return;
+
+  if (destino === 'fora') {
+    const varias = ids.length > 1;
+    const sim = await perguntar(
+      varias
+        ? `Apagar de vez ${ids.length} mensagens do lixo?`
+        : 'Apagar esta mensagem de vez?',
+      'Sai da sua caixa para sempre. A cópia de quem está do outro lado só '
+      + 'desaparece quando essa pessoa também a apagar — não é sua para apagar.');
+    if (!sim) return;
+  }
+
+  const r = await api('correio_arrumar', { p_ids: ids, p_destino: destino });
+  if (!r.ok) {
+    mostrarMsg(msgGeral, r.erro, 'erro');
+    return;
+  }
+
+  // Quando a linha morre mesmo, os ficheiros dela ficariam no Storage sem
+  // nada a apontar-lhes. A base devolve os caminhos e é aqui que se
+  // apagam — a policy só deixa quem os lá pôs.
+  const ficheiros = r.dados.ficheiros || [];
+  if (ficheiros.length) await sb.storage.from('correio').remove(ficheiros);
+
+  if (ids.indexOf(estado.abertaId) >= 0) {
+    estado.abertaId = null;
+    limparLeitura();
+  }
+  await carregar(true);
+}
+
+document.getElementById('btn-esvaziar').addEventListener('click', async () => {
+  // Esvaziar é esvaziar tudo, não só o que a procura está a mostrar. Se
+  // usasse a lista do ecrã, o botão fazia menos do que o nome promete.
+  const r = await api('correio_caixa',
+    { p_caixa: 'lixo', p_procura: null, p_so_por_ler: false });
+  if (!r.ok) {
+    mostrarMsg(msgGeral, r.erro, 'erro');
+    return;
+  }
+  const ids = r.dados.linhas.map((m) => m.id);
+  if (!ids.length) return;
+  await arrumar(ids, 'fora');
+});
 
 // ── leitura ────────────────────────────────────────────────────────
 function limparLeitura() {
@@ -138,7 +245,8 @@ async function abrir(id) {
   estado.abertaId = id;
   document.body.dataset.lendo = 'true';
 
-  const recebida = m.para === estado.eu;
+  const recebida = m.recebida;
+  const noLixo = estado.caixa === 'lixo';
   const ced = recebida ? m.de : m.para;
   const nome = (recebida ? m.de_nome : m.para_nome) || ced;
 
@@ -169,13 +277,23 @@ async function abrir(id) {
     </div>
 
     <div class="am-janela-pe" style="justify-content:flex-start">
-      <button type="button" class="am-botao" id="btn-responder">
-        <span class="am-icone i-responder" aria-hidden="true"></span>Responder
-      </button>
-      ${recebida ? `
-        <button type="button" class="am-botao am-botao-linha" id="btn-por-ler">
-          <span class="am-icone i-envelope" aria-hidden="true"></span>Marcar por ler
-        </button>` : ''}
+      ${noLixo ? `
+        <button type="button" class="am-botao" data-arrumar-um="caixa">
+          <span class="am-icone i-voltar" aria-hidden="true"></span>Repor na caixa
+        </button>
+        <button type="button" class="am-botao am-botao-linha" data-arrumar-um="fora">
+          <span class="am-icone i-lixo" aria-hidden="true"></span>Apagar de vez
+        </button>` : `
+        <button type="button" class="am-botao" id="btn-responder">
+          <span class="am-icone i-responder" aria-hidden="true"></span>Responder
+        </button>
+        ${recebida ? `
+          <button type="button" class="am-botao am-botao-linha" id="btn-por-ler">
+            <span class="am-icone i-envelope" aria-hidden="true"></span>Marcar por ler
+          </button>` : ''}
+        <button type="button" class="am-botao am-botao-linha" data-arrumar-um="lixo">
+          <span class="am-icone i-lixo" aria-hidden="true"></span>Apagar
+        </button>`}
     </div>`;
 
   const voltar = document.getElementById('btn-voltar');
@@ -189,7 +307,8 @@ async function abrir(id) {
     b.addEventListener('click', () => descarregarAnexo(b.dataset.caminho, b.dataset.nome, b));
   });
 
-  document.getElementById('btn-responder')
+  const btnResponder = document.getElementById('btn-responder');
+  if (btnResponder) btnResponder
     .addEventListener('click', () => abrirNova({
       para: ced,
       assunto: /^re:/i.test(m.assunto) ? m.assunto : 'Re: ' + m.assunto,
@@ -202,8 +321,13 @@ async function abrir(id) {
   const btnPorLer = document.getElementById('btn-por-ler');
   if (btnPorLer) btnPorLer.addEventListener('click', () => marcarLido(m.id, false));
 
+  elLeitura.querySelectorAll('[data-arrumar-um]').forEach((b) => {
+    b.addEventListener('click', () => arrumar([m.id], b.dataset.arrumarUm));
+  });
+
   // Abrir é ler. Marca-se depois de mostrar, para o ecrã não esperar pela rede.
-  if (recebida && !m.lido) await marcarLido(m.id, true);
+  // No lixo não: passar os olhos pelo que se deitou fora não é ler.
+  if (recebida && !m.lido && !noLixo) await marcarLido(m.id, true);
   desenharLista();
 }
 
@@ -238,7 +362,7 @@ async function marcarLido(id, lido) {
   if (!r.ok) return;
   const m = estado.linhas.find((x) => x.id === id);
   if (m) m.lido = lido;
-  marcarConta(r.dados.por_ler);
+  marcarConta(r.dados.por_ler);   // o lixo não muda ao marcar lido
   // Com "só por ler" ligado, marcar como lida tira-a da lista: a lista
   // deixaria de corresponder ao filtro que está no ecrã.
   if (estado.soPorLer) carregar(true);
@@ -792,8 +916,11 @@ function trocarCaixa(caixa) {
   document.querySelectorAll('.am-nav[data-caixa]').forEach((b) => {
     b.setAttribute('aria-current', String(b.dataset.caixa === caixa));
   });
-  document.getElementById('titulo-caixa').textContent =
-    caixa === 'enviados' ? 'Enviados' : 'Entrada';
+  const titulos = { enviados: 'Enviados', lixo: 'Lixo', entrada: 'Entrada' };
+  document.getElementById('titulo-caixa').textContent = titulos[caixa] || 'Entrada';
+  // "Só por ler" não quer dizer nada nos enviados nem no lixo.
+  document.getElementById('rotulo-por-ler').hidden = caixa !== 'entrada';
+  document.getElementById('btn-esvaziar').hidden = caixa !== 'lixo';
   carregar(false);
 }
 

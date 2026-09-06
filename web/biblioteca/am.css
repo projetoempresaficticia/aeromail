@@ -146,15 +146,33 @@ a { color: var(--am-primaria); }
 .am-leitura { background: var(--am-superficie); display: flex; flex-direction: column;
               min-width: 0; overflow: hidden; }
 
-/* ── item da lista ────────────────────────────────────────────────── */
+/* ── item da lista ──────────────────────────────────────────────────
+   Um <div> com dois botões lá dentro, e não um botão só: um botão dentro
+   de outro é HTML inválido, e sem o segundo não havia onde pôr o apagar
+   sem obrigar a abrir a mensagem primeiro. */
 .am-item {
-  display: flex; align-items: flex-start; gap: var(--am-e3);
+  display: flex; align-items: flex-start; gap: var(--am-e2);
   padding: var(--am-e3) var(--am-e4); border-bottom: 1px solid var(--am-borda);
-  cursor: pointer; background: var(--am-superficie); width: 100%;
-  border-left: 0; border-right: 0; border-top: 0; text-align: left;
-  font: inherit; color: inherit;
+  background: var(--am-superficie); width: 100%;
 }
 .am-item:hover { background: var(--am-fundo); }
+.am-item-abrir {
+  flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: var(--am-e3);
+  padding: 0; border: 0; background: transparent; text-align: left;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.am-item-accao {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  flex-shrink: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--am-secundario); cursor: pointer; opacity: 0;
+  transition: opacity 100ms ease, background 100ms ease;
+}
+.am-item:hover .am-item-accao,
+.am-item-accao:focus-visible { opacity: 1; }
+.am-item-accao:hover { background: var(--am-erro-veu); color: var(--am-erro); }
+.am-item-accao[data-repor="true"]:hover { background: var(--am-selecionado); color: var(--am-primaria); }
+/* Sem rato não há hover, e o botão ficava invisível para sempre. */
+@media (hover: none) { .am-item-accao { opacity: 1; } }
 .am-item[aria-current="true"] { background: var(--am-selecionado); }
 /* Por ler tem fundo, peso E selo: três sinais, não só a cor. */
 .am-item[data-por-ler="true"] { background: var(--am-selecionado); }
