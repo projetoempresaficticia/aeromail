@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="am-versao" content="49abd3d5420c" />
+<title>Biblioteca — AeroMail</title>
+<link rel="icon" href="favicon-32.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+<style>
+:root{
+  /* ── a paleta do kit ────────────────────────────────────────────── */
+  --am-primaria:#0F766E;      /* turquesa escuro — texto E fundo */
+  --am-hover:#115E59;
+  --am-destaque:#14B8A6;      /* PREENCHIMENTO, não texto */
+  --am-fundo:#F7FAF9;
+  --am-sidebar:#ECF5F3;
+  --am-selecionado:#D9F0EB;
+  --am-superficie:#FFFFFF;
+  --am-tinta:#202725;
+  --am-secundario:#6B7471;
+  --am-borda:#DCE5E2;
+  --am-erro:#DC4C4C;
+  --am-aviso:#F59E0B;
+
+  /* ── as duas correções que a medição obrigou ─────────────────────── */
+  /* #DC4C4C dá 4,05:1 — falha por pouco, e falha nos dois sentidos.
+     #C0392B é o mesmo vermelho, ligeiramente mais fundo: 5,44:1. */
+  --am-erro-texto:#C0392B;
+  /* #F59E0B é preenchimento (2,15:1). Para escrever, #B45309: 5,02:1. */
+  --am-aviso-texto:#B45309;
+
+  --am-erro-veu:#FDECEC;
+  --am-aviso-veu:#FEF6E7;
+  --am-ok-veu:#D9F0EB;
+
+  --am-e1:4px; --am-e2:8px; --am-e3:12px; --am-e4:16px;
+  --am-e5:24px; --am-e6:32px; --am-e7:48px; --am-e8:64px;
+  --am-r:10px; --am-r-painel:14px;
+  --am-sombra:0 1px 2px rgba(32,39,37,.04), 0 8px 24px rgba(32,39,37,.07);
+  --am-fonte:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--am-fundo);color:var(--am-tinta);
+     font:400 16px/1.5 var(--am-fonte);-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+h1{font-size:32px;font-weight:700} h2{font-size:24px;font-weight:600} h3{font-size:18px;font-weight:600}
+p{margin:0}
+a{color:var(--am-primaria)}
+.env{max-width:1180px;margin:0 auto;padding:var(--am-e6) var(--am-e5) var(--am-e8)}
+.sobre{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--am-secundario)}
+.suave{color:var(--am-secundario)}
+.pequeno{font-size:14px}
+.legenda{font-size:12px;color:var(--am-secundario)}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+section{margin-top:var(--am-e8)}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--am-e4);
+     padding-bottom:var(--am-e3);border-bottom:1px solid var(--am-borda);margin-bottom:var(--am-e5)}
+.painel{background:var(--am-superficie);border:1px solid var(--am-borda);
+        border-radius:var(--am-r-painel);padding:var(--am-e5);box-shadow:var(--am-sombra)}
+.grade{display:grid;gap:var(--am-e4);grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.fila{display:flex;flex-wrap:wrap;gap:var(--am-e3);align-items:center}
+
+/* ── topo ─────────────────────────────────────────────────────────── */
+.topo{background:var(--am-superficie);border-bottom:1px solid var(--am-borda)}
+.marca{display:flex;align-items:center;gap:var(--am-e4)}
+.marca img{width:56px;height:56px;display:block}
+.marca .nome{font-weight:700;font-size:30px;line-height:1;letter-spacing:-.03em}
+.marca .nome small{display:block;font-weight:400;font-size:13px;letter-spacing:0;
+                   color:var(--am-secundario);margin-top:6px}
+
+/* ── paleta ───────────────────────────────────────────────────────── */
+.cores{display:grid;gap:var(--am-e3);grid-template-columns:repeat(auto-fill,minmax(152px,1fr))}
+.cor{border:1px solid var(--am-borda);border-radius:var(--am-r);overflow:hidden;background:#fff}
+.cor .amostra{height:64px;display:grid;place-items:center;font-size:12px;font-weight:600}
+.cor .ficha{padding:var(--am-e3)}
+.cor .hex{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600}
+.cor .uso{font-size:11.5px;color:var(--am-secundario);margin-top:3px;line-height:1.35}
+.ratio{display:inline-block;font-family:ui-monospace,monospace;font-size:11px;font-weight:600;
+       padding:1px 6px;border-radius:99px;margin-top:6px}
+.passa{background:var(--am-ok-veu);color:var(--am-primaria)}
+.falha{background:var(--am-erro-veu);color:var(--am-erro-texto)}
+
+/* ── botões ───────────────────────────────────────────────────────── */
+.botao{display:inline-flex;align-items:center;justify-content:center;gap:var(--am-e2);
+       min-height:42px;padding:0 var(--am-e5);border:1px solid transparent;border-radius:var(--am-r);
+       font:600 14.5px/1 var(--am-fonte);cursor:pointer;text-decoration:none;
+       transition:background 120ms ease,border-color 120ms ease}
+.botao-primario{background:var(--am-primaria);color:#fff}
+.botao-primario:hover{background:var(--am-hover)}
+.botao-secundario{background:transparent;color:var(--am-primaria);border-color:var(--am-borda)}
+.botao-secundario:hover{background:var(--am-selecionado);border-color:var(--am-primaria)}
+.botao-fantasma{background:transparent;color:var(--am-primaria)}
+.botao-fantasma:hover{background:var(--am-selecionado)}
+.botao-perigo{background:var(--am-erro-texto);color:#fff}
+.botao-perigo:hover{background:#9C2E22}
+.botao:disabled{opacity:.45;cursor:not-allowed}
+.botao:focus-visible{outline:2px solid var(--am-primaria);outline-offset:2px}
+
+/* ── campos ───────────────────────────────────────────────────────── */
+.campo{margin-bottom:var(--am-e4)}
+.campo label{display:block;font-size:13px;font-weight:500;margin-bottom:var(--am-e2)}
+.campo input,.campo textarea,.campo select{
+  width:100%;min-height:44px;padding:11px var(--am-e4);
+  font:400 15px/1.4 var(--am-fonte);color:var(--am-tinta);background:#fff;
+  border:1px solid var(--am-borda);border-radius:var(--am-r);
+  transition:border-color 120ms ease,box-shadow 120ms ease}
+.campo input::placeholder{color:var(--am-secundario);opacity:1}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--am-primaria);
+  box-shadow:0 0 0 3px rgba(15,118,110,.18)}
+.campo.erro input{border-color:var(--am-erro-texto)}
+.campo.sucesso input{border-color:var(--am-primaria)}
+.campo .nota{font-size:12.5px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.campo.erro .nota{color:var(--am-erro-texto)}
+.campo.sucesso .nota{color:var(--am-primaria)}
+.busca{position:relative}
+.busca input{padding-left:42px;padding-right:64px}
+.busca .lupa{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+             width:18px;height:18px;background:var(--am-secundario);
+             -webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.atalho{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+        font-size:11px;font-weight:600;color:var(--am-secundario);
+        border:1px solid var(--am-borda);border-radius:6px;padding:2px 7px;background:var(--am-fundo)}
+
+/* ── ícones ───────────────────────────────────────────────────────── */
+.icone{display:inline-block;width:20px;height:20px;flex-shrink:0;vertical-align:-4px;
+       background-color:currentColor;
+       -webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.icones{display:grid;gap:var(--am-e3);grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
+.icone-ficha{text-align:center;padding:var(--am-e3);border:1px solid var(--am-borda);border-radius:var(--am-r)}
+.icone-falta{border-style:dashed;color:var(--am-secundario);opacity:.75}
+.icone-ficha .legenda{margin-top:6px;word-break:break-word}
+
+/* ── barra lateral ────────────────────────────────────────────────── */
+.demo{display:grid;grid-template-columns:232px minmax(0,1fr);border:1px solid var(--am-borda);
+      border-radius:var(--am-r-painel);overflow:hidden;background:#fff}
+.lateral{background:var(--am-sidebar);padding:var(--am-e4);border-right:1px solid var(--am-borda)}
+.lateral .marca-mini{display:flex;align-items:center;gap:var(--am-e2);padding:0 var(--am-e2) var(--am-e4)}
+.lateral .marca-mini img{width:26px;height:26px}
+.lateral .marca-mini span{font-weight:700;font-size:17px;letter-spacing:-.02em}
+.lateral a{display:flex;align-items:center;gap:var(--am-e3);padding:9px var(--am-e3);
+  border-radius:var(--am-r);color:var(--am-tinta);text-decoration:none;font-size:14px;font-weight:500}
+.lateral a:hover{background:var(--am-selecionado)}
+.lateral a[aria-current="page"]{background:var(--am-selecionado);color:var(--am-primaria);font-weight:600}
+.lateral .conta{margin-left:auto;font-size:12px;font-weight:700;
+                background:var(--am-primaria);color:#fff;border-radius:99px;padding:1px 7px}
+.lateral hr{border:0;border-top:1px solid var(--am-borda);margin:var(--am-e4) var(--am-e2)}
+
+/* ── avatares ─────────────────────────────────────────────────────── */
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+        font-weight:600;font-size:13.5px;color:#fff;flex-shrink:0;letter-spacing:.02em}
+
+/* ── selos ────────────────────────────────────────────────────────── */
+.selo{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:99px;
+      font-size:12.5px;font-weight:600}
+.selo .ponto{width:7px;height:7px;border-radius:50%;background:currentColor}
+.selo-nao-lido{background:var(--am-ok-veu);color:var(--am-primaria)}
+.selo-importante{background:var(--am-aviso-veu);color:var(--am-aviso-texto)}
+.selo-urgente{background:var(--am-erro-veu);color:var(--am-erro-texto)}
+.selo-neutro{background:var(--am-fundo);color:var(--am-secundario);border:1px solid var(--am-borda)}
+
+/* ── item de correio ──────────────────────────────────────────────── */
+.item{display:flex;align-items:flex-start;gap:var(--am-e3);padding:var(--am-e3) var(--am-e4);
+      border-bottom:1px solid var(--am-borda);cursor:pointer;background:#fff}
+.item:hover{background:var(--am-fundo)}
+.item[data-nao-lido="true"]{background:var(--am-selecionado)}
+.item[data-nao-lido="true"] .de,.item[data-nao-lido="true"] .assunto{font-weight:700}
+.item .de{font-size:14px;font-weight:600}
+.item .assunto{font-size:14px;margin-top:2px}
+.item .excerto{font-size:13px;color:var(--am-secundario);margin-top:2px;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .hora{font-size:12px;color:var(--am-secundario);white-space:nowrap}
+.lista{border:1px solid var(--am-borda);border-radius:var(--am-r-painel);overflow:hidden}
+.lista .item:last-child{border-bottom:0}
+
+/* ── entrada ──────────────────────────────────────────────────────── */
+.entrada{position:relative;min-height:340px;display:flex;align-items:center;
+         justify-content:flex-end;padding:var(--am-e6);
+         background:url('web/marca/fundo-entrada.webp') center/cover;
+         border-radius:var(--am-r-painel);overflow:hidden}
+/* O avião do fundo está à ESQUERDA e o espaço livre à direita — ao
+   contrário dos outros apps, o cartão assenta à direita. */
+.entrada::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(260deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.93) 30%,
+             rgba(255,255,255,.5) 52%, rgba(255,255,255,0) 72%)}
+.entrada-cartao{position:relative;width:100%;max-width:380px;background:#fff;
+  border-radius:var(--am-r-painel);border-top:3px solid var(--am-primaria);
+  box-shadow:0 18px 44px rgba(32,39,37,.24);padding:var(--am-e5)}
+
+.aviso-caixa{background:var(--am-selecionado);border-left:3px solid var(--am-primaria);
+             border-radius:0 var(--am-r) var(--am-r) 0;padding:var(--am-e4) var(--am-e5);
+             margin-top:var(--am-e4)}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="env" style="padding-block:var(--am-e7)">
+    <div class="marca">
+      <picture>
+        <source srcset="web/marca/am-marca.webp" type="image/webp" />
+        <img src="web/marca/am-marca.png" alt="" width="56" height="56" />
+      </picture>
+      <div class="nome">AeroMail<small>O correio interno da Prepara Portugal.</small></div>
+    </div>
+    <h1 style="margin-top:var(--am-e6);max-width:20ch">Biblioteca de design</h1>
+    <p class="suave" style="margin-top:var(--am-e3);max-width:62ch">
+      A paleta que enviaste, medida. Os componentes do kit, construídos. E o
+      que falta para a app poder ser feita.
+    </p>
+  </div>
+</header>
+
+<div class="env">
+
+<!-- ═══ 01. PALETA ═══════════════════════════════════════════════ -->
+<section style="margin-top:var(--am-e6)">
+  <div class="cab">
+    <div><p class="sobre">01 · medido, não achado</p><h2>Paleta de cores</h2></div>
+    <p class="legenda">Contraste contra branco · WCAG 2.1 pede 4,5:1 para texto</p>
+  </div>
+
+  <div class="cores" id="cores"></div>
+
+  <div class="aviso-caixa">
+    <h3>Este kit está quase todo certo — e isso é raro</h3>
+    <p class="pequeno" style="margin-top:var(--am-e2)">
+      A turquesa <strong class="mono">#0F766E</strong> dá <strong>5,47:1</strong>
+      sobre branco <em>e</em> aguenta branco por cima. Serve para escrever e para
+      preencher, o que quase nenhuma cor de marca faz. O texto secundário
+      <strong class="mono">#6B7471</strong> passa a <strong>4,81:1</strong>, e o
+      <strong class="mono">#14B8A6</strong> é claramente um destaque de
+      preenchimento, como o kit já o usa.
+    </p>
+    <p class="pequeno" style="margin-top:var(--am-e3)">
+      Nos três kits anteriores a cor da marca falhava como texto e obrigou a
+      inventar uma variante escura. Aqui não foi preciso.
+    </p>
+  </div>
+
+  <div class="aviso-caixa" style="border-left-color:var(--am-erro-texto);background:var(--am-erro-veu)">
+    <h3>Só uma cor falha, e por pouco</h3>
+    <p class="pequeno" style="margin-top:var(--am-e2)">
+      O vermelho <strong class="mono">#DC4C4C</strong> dá <strong>4,05:1</strong> —
+      falta-lhe 0,45 para o mínimo, e falha nos <em>dois</em> sentidos: como texto
+      de erro sobre branco e como botão com letras brancas. É a cor com que se
+      diz a alguém que algo correu mal; tem de se ler.
+      Escureci-a o mínimo: <strong class="mono">#C0392B</strong>, <strong>5,44:1</strong>.
+      Ao lado é quase indistinguível.
+    </p>
+    <p class="pequeno" style="margin-top:var(--am-e3)">
+      E o âmbar <strong class="mono">#F59E0B</strong> (2,15:1) é preenchimento —
+      para escrever avisos, <strong class="mono">#B45309</strong>, 5,02:1.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 02. TIPOGRAFIA ═══════════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">02 · Inter</p><h2>Tipografia</h2></div></div>
+  <div class="painel" style="display:grid;gap:var(--am-e4)">
+    <div><span class="legenda mono">H1 · Bold 32 / 120%</span><h1>Título principal</h1></div>
+    <div><span class="legenda mono">H2 · Semibold 24 / 120%</span><h2>Título de secção</h2></div>
+    <div><span class="legenda mono">H3 · Semibold 18 / 120%</span><h3>Subtítulo</h3></div>
+    <div><span class="legenda mono">Corpo · Regular 16 / 150%</span><p>Texto principal de leitura.</p></div>
+    <div><span class="legenda mono">Secundário · Regular 14 / 150%</span><p class="pequeno suave">Informação complementar.</p></div>
+    <div><span class="legenda mono">Legenda · Regular 12 / 150%</span><p class="legenda">Notas e informação secundária.</p></div>
+  </div>
+</section>
+
+<!-- ═══ 03. BOTÕES ═══════════════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">03</p><h2>Botões</h2></div></div>
+  <div class="painel">
+    <div class="fila">
+      <button class="botao botao-primario">
+        <span class="icone i-seta-direita"></span>Enviar mensagem</button>
+      <button class="botao botao-secundario">Cancelar</button>
+      <button class="botao botao-fantasma"><span class="icone i-mais"></span>Nova mensagem</button>
+      <button class="botao botao-perigo">Apagar</button>
+    </div>
+    <div class="fila" style="margin-top:var(--am-e4)">
+      <button class="botao botao-primario" disabled>Enviar mensagem</button>
+      <button class="botao botao-secundario" disabled>Cancelar</button>
+    </div>
+    <p class="legenda" style="margin-top:var(--am-e4)">
+      O botão de apagar usa <span class="mono">#C0392B</span> e não
+      <span class="mono">#DC4C4C</span>: com o original, as letras brancas
+      ficavam a 4,05:1.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 04. CAMPOS E BUSCA ═══════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">04</p><h2>Campos e busca</h2></div></div>
+  <div class="painel grade">
+    <div>
+      <div class="campo busca">
+        <label for="b">Procurar</label>
+        <span class="lupa" style="--i:url(web/icones/procurar.svg);top:calc(50% + 12px)"></span>
+        <input id="b" placeholder="Procurar por assunto, pessoa ou texto…" />
+        <span class="atalho" style="top:calc(50% + 12px)">Ctrl K</span>
+      </div>
+      <div class="campo">
+        <label for="d">Destinatário</label>
+        <input id="d" class="mono" placeholder="PP-2026-00011" />
+      </div>
+    </div>
+    <div>
+      <div class="campo sucesso">
+        <label for="ok">Reconhecido</label>
+        <input id="ok" class="mono" value="PP-2026-00011" />
+        <p class="nota"><span class="icone i-ok" style="width:15px;height:15px"></span>
+          Rita Mendes · contabilista</p>
+      </div>
+      <div class="campo erro">
+        <label for="er">Com erro</label>
+        <input id="er" class="mono" value="PP-2026-99999" aria-invalid="true" />
+        <p class="nota"><span class="icone i-aviso" style="width:15px;height:15px"></span>
+          Não há ninguém com esta cédula.</p>
+      </div>
+    </div>
+    <div>
+      <p class="legenda">
+        O campo de destinatário aceita a <strong>cédula</strong>, não um email:
+        aqui ninguém tem endereço, tem identidade. Ao escrever, a app resolve o
+        nome — e diz logo se a pessoa existe, em vez de deixar enviar para o
+        vazio e falhar no servidor.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 05. BARRA LATERAL ════════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">05</p><h2>Navegação e lista</h2></div></div>
+  <div class="demo">
+    <aside class="lateral">
+      <div class="marca-mini">
+        <img src="web/marca/am-marca.png" alt="" />
+        <span>AeroMail</span>
+      </div>
+      <button class="botao botao-primario" style="width:100%;margin-bottom:var(--am-e4)">
+        <span class="icone i-mais"></span>Nova mensagem</button>
+      <a href="#" aria-current="page"><span class="icone i-inicio"></span>Caixa de entrada
+        <span class="conta">3</span></a>
+      <a href="#"><span class="icone i-seta-direita"></span>Enviados</a>
+      <a href="#"><span class="icone i-relogio"></span>Por ler</a>
+      <hr />
+      <a href="#"><span class="icone i-utilizador"></span>Diretório</a>
+    </aside>
+
+    <div>
+      <div style="padding:var(--am-e4);border-bottom:1px solid var(--am-borda);
+                  display:flex;align-items:center;justify-content:space-between">
+        <h3 style="margin:0">Caixa de entrada</h3>
+        <span class="legenda">3 por ler</span>
+      </div>
+      <div id="lista-demo"></div>
+    </div>
+  </div>
+  <p class="legenda" style="margin-top:var(--am-e3)">
+    A mensagem por ler tem <strong>fundo, peso de letra e selo</strong> — três
+    sinais, não só a cor. Quem não distingue a turquesa clara do branco continua
+    a saber o que ainda não leu.
+  </p>
+</section>
+
+<!-- ═══ 06. AVATARES E SELOS ═════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">06</p><h2>Avatares e selos</h2></div></div>
+  <div class="painel">
+    <div class="fila" id="avatares"></div>
+    <p class="legenda" style="margin-top:var(--am-e3)">
+      Iniciais e não fotografias: no ecossistema quase ninguém tem foto, e uma
+      inicial nunca falha a carregar. A cor sai da própria cédula, por isso a
+      mesma pessoa tem sempre a mesma.
+    </p>
+    <div class="fila" style="margin-top:var(--am-e5)">
+      <span class="selo selo-nao-lido"><span class="ponto"></span>Não lido</span>
+      <span class="selo selo-importante"><span class="ponto"></span>Importante</span>
+      <span class="selo selo-urgente"><span class="ponto"></span>Urgente</span>
+      <span class="selo selo-neutro"><span class="ponto"></span>Arquivado</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 07. ÍCONES ═══════════════════════════════════════════════ -->
+<section>
+  <div class="cab">
+    <div><p class="sobre">07</p><h2>Ícones</h2></div>
+    <p class="legenda" id="conta-icones"></p>
+  </div>
+  <div class="painel">
+    <p class="pequeno">
+      Máscaras pintadas com <span class="mono">currentColor</span>, não imagens:
+      um SVG dentro de <span class="mono">&lt;img&gt;</span> não herda a cor do
+      texto, e foi assim que no Portal das Finanças o ícone do item ativo ficou
+      branco sobre branco e desapareceu.
+    </p>
+
+    <div class="fila" style="margin-top:var(--am-e4)">
+      <div style="background:var(--am-primaria);color:#fff;padding:12px 16px;border-radius:var(--am-r);
+                  display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600">
+        <span class="icone i-inicio"></span>sobre turquesa</div>
+      <div style="background:var(--am-selecionado);color:var(--am-primaria);padding:12px 16px;
+                  border-radius:var(--am-r);display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600">
+        <span class="icone i-inicio"></span>sobre o selecionado</div>
+      <div style="background:#fff;color:var(--am-secundario);border:1px solid var(--am-borda);
+                  padding:12px 16px;border-radius:var(--am-r);display:flex;gap:8px;align-items:center;
+                  font-size:13px;font-weight:600">
+        <span class="icone i-inicio"></span>sobre branco</div>
+    </div>
+
+    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">Os que temos</h3>
+    <div class="icones" id="icones"></div>
+
+    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">Os que faltam</h3>
+    <p class="pequeno" style="margin-bottom:var(--am-e3)">
+      Herdámos o conjunto dos órgãos do Estado, e um correio precisa de outros.
+      <strong>Estes doze não existem</strong> — os quadrados a tracejado abaixo
+      são lugares vazios, não ícones. Sem eles, a app fica com botões só de
+      texto onde devia haver um envelope ou um clipe.
+    </p>
+    <div class="icones" id="icones-falta"></div>
+  </div>
+</section>
+
+<!-- ═══ 08. ENTRADA ══════════════════════════════════════════════ -->
+<section>
+  <div class="cab"><div><p class="sobre">08</p><h2>Ecrã de entrada</h2></div></div>
+  <div class="entrada">
+    <div class="entrada-cartao">
+      <div style="display:flex;align-items:center;gap:var(--am-e3);margin-bottom:var(--am-e4)">
+        <img src="web/marca/am-marca.png" alt="" width="40" height="40" />
+        <div style="font-weight:700;font-size:19px;letter-spacing:-.02em">AeroMail</div>
+      </div>
+      <h3 style="margin-bottom:var(--am-e2)">Entrar</h3>
+      <p class="pequeno suave" style="margin-bottom:var(--am-e4)">
+        A sua caixa de correio dentro da Prepara Portugal.
+      </p>
+      <div class="campo"><label>Email de login</label>
+        <input placeholder="nome@prepara.pt" /></div>
+      <button class="botao botao-primario" style="width:100%">Entrar</button>
+    </div>
+  </div>
+  <p class="legenda" style="margin-top:var(--am-e3)">
+    O cartão vai à <strong>direita</strong>, ao contrário dos outros apps: neste
+    fundo o avião ocupa a esquerda e o espaço livre é do outro lado. O véu segue
+    a mesma direção. · 1175 KB → 37 KB em WebP.
+  </p>
+</section>
+
+</div>
+
+<script>
+// ── a paleta, medida no browser ────────────────────────────────────
+const PALETA = [
+  ['#0F766E','Primária — turquesa escuro'], ['#115E59','Hover'],
+  ['#14B8A6','Destaque'], ['#F7FAF9','Fundo'], ['#ECF5F3','Barra lateral'],
+  ['#D9F0EB','Selecionado'], ['#FFFFFF','Cartão / superfície'],
+  ['#202725','Texto principal'], ['#6B7471','Texto secundário'],
+  ['#DCE5E2','Borda'], ['#DC4C4C','Erro (do kit)'],
+  ['#C0392B','Erro corrigido'], ['#F59E0B','Aviso'], ['#B45309','Aviso em texto'],
+];
+
+function lum(hex) {
+  const v = [1,3,5].map(i => parseInt(hex.substr(i,2),16)/255)
+    .map(c => c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4));
+  return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2];
+}
+function contraste(a,b){const la=lum(a),lb=lum(b);
+  return (Math.max(la,lb)+0.05)/(Math.min(la,lb)+0.05);}
+
+document.getElementById('cores').innerHTML = PALETA.map(([hex, nome]) => {
+  const cb = contraste(hex,'#FFFFFF'), ct = contraste(hex,'#202725');
+  const claroPorCima = cb < ct;
+  const uso = cb >= 4.5 ? 'Serve para escrever sobre branco.'
+    : (ct >= 4.5 ? 'Preenchimento — com tinta por cima.' : 'Só decoração.');
+  return `
+    <div class="cor">
+      <div class="amostra" style="background:${hex};color:${claroPorCima ? '#202725' : '#FFFFFF'}">
+        ${claroPorCima ? 'texto escuro' : 'texto claro'}
+      </div>
+      <div class="ficha">
+        <div class="hex">${hex}</div>
+        <div class="uso">${nome}<br />${uso}</div>
+        <span class="ratio ${cb >= 4.5 ? 'passa' : 'falha'}">${cb.toFixed(2)}:1</span>
+      </div>
+    </div>`;
+}).join('');
+
+// ── ícones ─────────────────────────────────────────────────────────
+const TEMOS = ['ajuda','aviso','calendario','declaracoes','definicoes','descarregar',
+  'editar','escudo','fechar','filtrar','grafico','inicio','mais','ok','procurar',
+  'relogio','sair','seta-baixo','seta-cima','seta-direita','seta-esquerda','sino','utilizador'];
+const FALTAM = ['envelope','enviar','responder','encaminhar','anexo','estrela',
+  'etiqueta','lixo','arquivar','utilizadores','rascunho','marcar-lido'];
+
+document.getElementById('conta-icones').textContent =
+  `${TEMOS.length} disponíveis · ${FALTAM.length} por arranjar`;
+
+document.getElementById('icones').innerHTML = TEMOS.map(n => `
+  <div class="icone-ficha">
+    <span class="icone" style="--i:url(web/icones/${n}.svg);width:24px;height:24px;color:var(--am-primaria)"></span>
+    <div class="legenda">${n}</div>
+  </div>`).join('');
+
+document.getElementById('icones-falta').innerHTML = FALTAM.map(n => `
+  <div class="icone-ficha icone-falta">
+    <span style="display:inline-block;width:24px;height:24px;border:1px dashed currentColor;border-radius:5px"></span>
+    <div class="legenda">${n}</div>
+  </div>`).join('');
+
+// ── avatares: a cor sai da cédula ──────────────────────────────────
+const TONS = ['#0F766E','#115E59','#0E7490','#5B4B8A','#9A6A1E','#8A3B3B','#2F6B4F'];
+function avatar(nome, cedula) {
+  const iniciais = nome.split(' ').filter(Boolean).slice(0,2)
+    .map(p => p[0].toUpperCase()).join('');
+  let soma = 0;
+  for (const c of cedula) soma = (soma + c.charCodeAt(0)) % 997;
+  return `<div class="avatar" style="background:${TONS[soma % TONS.length]}"
+               title="${nome}">${iniciais}</div>`;
+}
+document.getElementById('avatares').innerHTML = [
+  ['Rita Mendes','PP-2026-00011'], ['Tiago Nunes','PP-2026-00012'],
+  ['Germano Silva','PP-2026-00010'], ['Professor Prepara','PP-2026-00002'],
+  ['Autoridade Tributária','EP-2026-00006'],
+].map(([n,c]) => avatar(n,c)).join('');
+
+// ── a lista de correio ─────────────────────────────────────────────
+const CORREIO = [
+  { de:'Autoridade Tributária', cedula:'EP-2026-00006', naoLido:true, hora:'09:12',
+    assunto:'Guia de IVA de setembro entregue', selo:'nao-lido',
+    excerto:'A sua declaração recebeu o protocolo AT-2026-000001 e está regularizada.' },
+  { de:'Segurança Social', cedula:'EP-2026-00005', naoLido:true, hora:'08:40',
+    assunto:'Admissão de Rita Mendes registada', selo:'importante',
+    excerto:'A admissão foi aprovada com o protocolo SS-2026-000003.' },
+  { de:'Cartório Notarial', cedula:'EP-2026-00007', naoLido:true, hora:'Ontem',
+    assunto:'Certidão permanente por pagar', selo:'urgente',
+    excerto:'O boleto BOL-2026-000013 vence dentro de três dias.' },
+  { de:'Rita Mendes', cedula:'PP-2026-00011', naoLido:false, hora:'2 de set',
+    assunto:'Re: fecho de contas de agosto', selo:null,
+    excerto:'Já conferi os movimentos todos, podes avançar com a declaração.' },
+];
+document.getElementById('lista-demo').innerHTML = CORREIO.map(m => `
+  <div class="item" data-nao-lido="${m.naoLido}">
+    ${avatar(m.de, m.cedula)}
+    <div style="flex:1;min-width:0">
+      <div class="de">${m.de}</div>
+      <div class="assunto">${m.assunto}</div>
+      <div class="excerto">${m.excerto}</div>
+    </div>
+    <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="hora">${m.hora}</span>
+      ${m.selo ? `<span class="selo selo-${m.selo}"><span class="ponto"></span>${
+        {'nao-lido':'Não lido','importante':'Importante','urgente':'Urgente'}[m.selo]}</span>` : ''}
+    </div>
+  </div>`).join('');
+</script>
+</body>
+</html>
