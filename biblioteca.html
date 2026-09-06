@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="am-versao" content="49abd3d5420c" />
+<meta name="am-versao" content="0e875cf015ee" />
 <title>Biblioteca — AeroMail</title>
 <link rel="icon" href="favicon-32.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -128,6 +128,30 @@ section{margin-top:var(--am-e8)}
 .icone{display:inline-block;width:20px;height:20px;flex-shrink:0;vertical-align:-4px;
        background-color:currentColor;
        -webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.i-envelope { --i: url(web/icones/mail.svg); }
+.i-enviar { --i: url(web/icones/send.svg); }
+.i-responder { --i: url(web/icones/up-left.svg); }
+.i-encaminhar { --i: url(web/icones/right-2.svg); }
+.i-anexo { --i: url(web/icones/paperclip.svg); }
+.i-estrela { --i: url(web/icones/star.svg); }
+.i-etiqueta { --i: url(web/icones/bookmark.svg); }
+.i-lixo { --i: url(web/icones/trash-can.svg); }
+.i-arquivar { --i: url(web/icones/box-1.svg); }
+.i-utilizadores { --i: url(web/icones/users.svg); }
+.i-rascunho { --i: url(web/icones/edit-1.svg); }
+.i-marcar-lido { --i: url(web/icones/check.svg); }
+.i-inicio { --i: url(web/icones/home.svg); }
+.i-procurar { --i: url(web/icones/search.svg); }
+.i-nova { --i: url(web/icones/plus.svg); }
+.i-fechar { --i: url(web/icones/close.svg); }
+.i-definicoes { --i: url(web/icones/settings.svg); }
+.i-utilizador { --i: url(web/icones/user.svg); }
+.i-sino { --i: url(web/icones/bell.svg); }
+.i-relogio { --i: url(web/icones/time-circle.svg); }
+.i-sair { --i: url(web/icones/logout.svg); }
+.i-aviso { --i: url(web/icones/danger.svg); }
+.i-ajuda { --i: url(web/icones/info-circle.svg); }
+.i-descarregar { --i: url(web/icones/download-2.svg); }
 .icones{display:grid;gap:var(--am-e3);grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
 .icone-ficha{text-align:center;padding:var(--am-e3);border:1px solid var(--am-borda);border-radius:var(--am-r)}
 .icone-falta{border-style:dashed;color:var(--am-secundario);opacity:.75}
@@ -276,9 +300,9 @@ section{margin-top:var(--am-e8)}
   <div class="painel">
     <div class="fila">
       <button class="botao botao-primario">
-        <span class="icone i-seta-direita"></span>Enviar mensagem</button>
+        <span class="icone i-enviar"></span>Enviar mensagem</button>
       <button class="botao botao-secundario">Cancelar</button>
-      <button class="botao botao-fantasma"><span class="icone i-mais"></span>Nova mensagem</button>
+      <button class="botao botao-fantasma"><span class="icone i-nova"></span>Nova mensagem</button>
       <button class="botao botao-perigo">Apagar</button>
     </div>
     <div class="fila" style="margin-top:var(--am-e4)">
@@ -300,7 +324,7 @@ section{margin-top:var(--am-e8)}
     <div>
       <div class="campo busca">
         <label for="b">Procurar</label>
-        <span class="lupa" style="--i:url(web/icones/procurar.svg);top:calc(50% + 12px)"></span>
+        <span class="lupa" style="--i:url(web/icones/search.svg);top:calc(50% + 12px)"></span>
         <input id="b" placeholder="Procurar por assunto, pessoa ou texto…" />
         <span class="atalho" style="top:calc(50% + 12px)">Ctrl K</span>
       </div>
@@ -313,7 +337,7 @@ section{margin-top:var(--am-e8)}
       <div class="campo sucesso">
         <label for="ok">Reconhecido</label>
         <input id="ok" class="mono" value="PP-2026-00011" />
-        <p class="nota"><span class="icone i-ok" style="width:15px;height:15px"></span>
+        <p class="nota"><span class="icone i-marcar-lido" style="width:15px;height:15px"></span>
           Rita Mendes · contabilista</p>
       </div>
       <div class="campo erro">
@@ -344,10 +368,10 @@ section{margin-top:var(--am-e8)}
         <span>AeroMail</span>
       </div>
       <button class="botao botao-primario" style="width:100%;margin-bottom:var(--am-e4)">
-        <span class="icone i-mais"></span>Nova mensagem</button>
+        <span class="icone i-nova"></span>Nova mensagem</button>
       <a href="#" aria-current="page"><span class="icone i-inicio"></span>Caixa de entrada
         <span class="conta">3</span></a>
-      <a href="#"><span class="icone i-seta-direita"></span>Enviados</a>
+      <a href="#"><span class="icone i-enviar"></span>Enviados</a>
       <a href="#"><span class="icone i-relogio"></span>Por ler</a>
       <hr />
       <a href="#"><span class="icone i-utilizador"></span>Diretório</a>
@@ -415,19 +439,22 @@ section{margin-top:var(--am-e8)}
         <span class="icone i-inicio"></span>sobre branco</div>
     </div>
 
-    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">Os que temos</h3>
-    <div class="icones" id="icones"></div>
-
-    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">Os que faltam</h3>
-    <p class="pequeno" style="margin-bottom:var(--am-e3)">
-      Herdámos o conjunto dos órgãos do Estado, e um correio precisa de outros.
-      <strong>Estes doze não existem</strong> — os quadrados a tracejado abaixo
-      são lugares vazios, não ícones. Sem eles, a app fica com botões só de
-      texto onde devia haver um envelope ou um clipe.
+    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">O vocabulário do AeroMail</h3>
+    <p class="pequeno" style="margin-bottom:var(--am-e4)">
+      À esquerda o nome que a app usa, à direita o ficheiro que veio do Figma.
+      A classe é o vocabulário, o ficheiro é o desenho — e é a máscara que os
+      liga. Assim o nome do ficheiro diz de onde veio e a app fala português.
     </p>
-    <div class="icones" id="icones-falta"></div>
-  </div>
-</section>
+    <div class="icones" id="icones-vocab"></div>
+
+    <h3 style="margin:var(--am-e6) 0 var(--am-e3)">O conjunto completo</h3>
+    <p class="pequeno" style="margin-bottom:var(--am-e4)">
+      <strong id="conta-total"></strong> ícones das duas famílias de interface
+      do teu ficheiro — <em>User Interface</em> e <em>Arrows &amp; Directions</em>.
+      O resto do ficheiro são logótipos de marcas, que aqui não servem.
+    </p>
+    <div class="icones" id="icones"></div>
+  </section>
 
 <!-- ═══ 08. ENTRADA ══════════════════════════════════════════════ -->
 <section>
@@ -494,24 +521,23 @@ document.getElementById('cores').innerHTML = PALETA.map(([hex, nome]) => {
 }).join('');
 
 // ── ícones ─────────────────────────────────────────────────────────
-const TEMOS = ['ajuda','aviso','calendario','declaracoes','definicoes','descarregar',
-  'editar','escudo','fechar','filtrar','grafico','inicio','mais','ok','procurar',
-  'relogio','sair','seta-baixo','seta-cima','seta-direita','seta-esquerda','sino','utilizador'];
-const FALTAM = ['envelope','enviar','responder','encaminhar','anexo','estrela',
-  'etiqueta','lixo','arquivar','utilizadores','rascunho','marcar-lido'];
+const VOCAB = [["envelope", "mail"], ["enviar", "send"], ["responder", "up-left"], ["encaminhar", "right-2"], ["anexo", "paperclip"], ["estrela", "star"], ["etiqueta", "bookmark"], ["lixo", "trash-can"], ["arquivar", "box-1"], ["utilizadores", "users"], ["rascunho", "edit-1"], ["marcar-lido", "check"], ["inicio", "home"], ["procurar", "search"], ["nova", "plus"], ["fechar", "close"], ["definicoes", "settings"], ["utilizador", "user"], ["sino", "bell"], ["relogio", "time-circle"], ["sair", "logout"], ["aviso", "danger"], ["ajuda", "info-circle"], ["descarregar", "download-2"]];
+const TODOS = ["add-user", "alarm-clock", "bag-1", "bag-2", "bag-3", "basketball", "bell", "book", "bookmark", "box-1", "box-2", "browser", "burger", "calculator", "calendar", "call", "call-missed", "call-silent", "calling", "camera", "cart", "case", "category", "category-2", "chart", "chart-1", "check", "close", "cloud", "cloud-download", "cloud-upload", "coffee", "coins", "collapse", "color-palette", "compas", "copy", "coupon-1", "coupon-2", "coupon-3", "credit-card", "danger", "document", "document-2", "document-add", "document-delite", "down", "down-2", "down-circle", "down-left", "down-left-circle", "down-right", "down-right-circle", "down-square", "down-square-2", "download-2", "edit-1", "edit-2", "expand", "eye", "figma", "filter", "fire", "flag", "folder", "gamepad", "gift", "graph", "headphones", "heart", "heartbeat", "hide", "home", "image", "info-circle", "info-square", "iphone", "key", "laptop", "layers", "left", "left-2", "left-circle", "left-square", "left-square-2", "lightning", "link", "link-2", "loading", "location", "lock", "lock-check", "lock-open", "lock-x", "login", "logout", "mail", "message-circle", "message-square", "microphone", "minus", "more-circle", "more-square", "mouse", "music", "music-plate", "no-sound-microphone", "oldschool-gamepad", "paperclip", "pause", "play", "plus", "receipt", "right", "right-2", "right-circle", "right-square", "right-square-2", "rocket", "sale", "save", "scale", "scanner", "screen", "search", "send", "settings", "share", "shield", "star", "stop", "swap", "swap-2", "swap-3", "time-circle", "time-square", "timer", "toggle-left", "toggle-right", "trash-can", "up", "up-2", "up-circle", "up-left", "up-left-circle", "up-right", "up-right-circle", "up-square", "up-square-2", "user", "users", "video", "volume-down", "volume-off-1", "volume-off-2", "volume-up", "wallet", "zoom-in", "zoom-out"];
 
 document.getElementById('conta-icones').textContent =
-  `${TEMOS.length} disponíveis · ${FALTAM.length} por arranjar`;
+  `${TODOS.length} ícones · ${VOCAB.length} com nome próprio na app`;
+document.getElementById('conta-total').textContent = TODOS.length;
 
-document.getElementById('icones').innerHTML = TEMOS.map(n => `
+document.getElementById('icones-vocab').innerHTML = VOCAB.map(([pt, en]) => `
   <div class="icone-ficha">
-    <span class="icone" style="--i:url(web/icones/${n}.svg);width:24px;height:24px;color:var(--am-primaria)"></span>
-    <div class="legenda">${n}</div>
+    <span class="icone" style="--i:url(web/icones/${en}.svg);width:24px;height:24px;color:var(--am-primaria)"></span>
+    <div class="legenda" style="font-weight:600;color:var(--am-tinta)">${pt}</div>
+    <div class="legenda">${en}</div>
   </div>`).join('');
 
-document.getElementById('icones-falta').innerHTML = FALTAM.map(n => `
-  <div class="icone-ficha icone-falta">
-    <span style="display:inline-block;width:24px;height:24px;border:1px dashed currentColor;border-radius:5px"></span>
+document.getElementById('icones').innerHTML = TODOS.map(n => `
+  <div class="icone-ficha">
+    <span class="icone" style="--i:url(web/icones/${n}.svg);width:22px;height:22px;color:var(--am-secundario)"></span>
     <div class="legenda">${n}</div>
   </div>`).join('');
 
