@@ -182,7 +182,17 @@ document.addEventListener('DOMContentLoaded', ligarFechos);
 // peças a dizer o mesmo, de propósito.
 const AM_ETIQUETAS = {
   B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, A: 1, BR: 1,
-  P: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1,
+  P: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, IMG: 1,
+};
+
+// De cada etiqueta, o que pode sobreviver. Tudo o resto cai, incluindo o
+// `src` de uma <img>: o endereco de uma imagem do corpo e sempre a app que
+// o poe, a partir do anexo apontado por `data-anexo`. Se o `src` da
+// mensagem sobrevivesse, quem escreve podia apontar para um servidor seu e
+// ficar a saber quando e de onde a mensagem foi aberta.
+const AM_ATRIBUTOS = {
+  A: ['href'],
+  IMG: ['data-anexo', 'alt', 'data-papel'],
 };
 
 function limparNo(pai) {
@@ -211,13 +221,25 @@ function limparNo(pai) {
       return;
     }
 
-    // De atributos só sobrevive o href de uma <a>. Nada de style, nada de
-    // on*, nada de class: uma classe nossa numa mensagem de fora podia
-    // fazer-se passar por um aviso do sistema.
+    // Nada de style, nada de on*, nada de class: uma classe nossa numa
+    // mensagem de fora podia fazer-se passar por um aviso do sistema.
+    const permitidos = AM_ATRIBUTOS[etiqueta] || [];
     Array.from(no.attributes).forEach((at) => {
-      if (etiqueta === 'A' && at.name.toLowerCase() === 'href') return;
+      if (permitidos.indexOf(at.name.toLowerCase()) >= 0) return;
       no.removeAttribute(at.name);
     });
+
+    if (etiqueta === 'IMG') {
+      // Sem referência a um anexo não há nada para desenhar — e o `src`
+      // acabou de ser deitado fora, por isso a imagem ficaria vazia.
+      if (!no.getAttribute('data-anexo')) {
+        no.remove();
+        return;
+      }
+      if (no.getAttribute('data-papel') !== 'assinatura') {
+        no.removeAttribute('data-papel');
+      }
+    }
 
     if (etiqueta === 'A') {
       const h = (no.getAttribute('href') || '').trim();
@@ -276,4 +298,70 @@ function iconeDoTipo(tipo) {
   if (t.startsWith('image/')) return 'i-imagem';
   if (t === 'application/pdf') return 'i-documento';
   return 'i-anexo';
+}
+
+// ── imagens do corpo: dar-lhes o endereço ──────────────────────────
+// O corpo guardado traz `<img data-anexo="<caminho>">` e mais nada. O
+// endereço é assinado aqui, no momento de desenhar, e dura dez minutos.
+// Assim o que fica na base nunca é um endereço — é uma referência a um
+// anexo desta mensagem, e a app é a única que decide para onde aponta.
+async function resolverImagens(raiz, anexos) {
+  const imagens = Array.from(raiz.querySelectorAll('img[data-anexo]'));
+  if (!imagens.length) return;
+
+  const porCaminho = {};
+  (anexos || []).forEach((a) => { porCaminho[a.caminho] = a; });
+
+  const caminhos = Array.from(new Set(
+    imagens.map((im) => im.getAttribute('data-anexo')))).filter((c) => porCaminho[c]);
+
+  const endereco = {};
+  if (caminhos.length) {
+    const { data } = await sb.storage.from('correio').createSignedUrls(caminhos, 600);
+    (data || []).forEach((d) => { if (d && d.signedUrl) endereco[d.path] = d.signedUrl; });
+  }
+
+  imagens.forEach((im) => {
+    const c = im.getAttribute('data-anexo');
+    if (endereco[c]) {
+      im.src = endereco[c];
+      if (!im.getAttribute('alt')) {
+        im.alt = porCaminho[c] ? porCaminho[c].nome : 'Imagem';
+      }
+      return;
+    }
+    // O anexo desapareceu ou não é nosso para ver. Dizer isso é melhor do
+    // que deixar um quadrado partido sem explicação.
+    const nota = document.createElement('span');
+    nota.className = 'am-imagem-perdida';
+    nota.textContent = 'Imagem indisponível';
+    im.replaceWith(nota);
+  });
+}
+
+// ── reduzir uma imagem antes de a guardar ──────────────────────────
+// Uma assinatura fotografada com o telemóvel chega com 3000 px e três
+// megabytes. Passa pelo canvas: fica com o tamanho certo, sai sempre em
+// PNG (o caminho no Storage deixa de depender do formato de origem) e
+// perde os metadados EXIF pelo caminho — que numa fotografia de telemóvel
+// costumam trazer as coordenadas de onde foi tirada.
+function reduzirImagem(ficheiro, maxLargura, maxAltura) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(ficheiro);
+    const im = new Image();
+    im.onload = () => {
+      const escala = Math.min(1, maxLargura / im.width, maxAltura / im.height);
+      const tela = document.createElement('canvas');
+      tela.width = Math.max(1, Math.round(im.width * escala));
+      tela.height = Math.max(1, Math.round(im.height * escala));
+      tela.getContext('2d').drawImage(im, 0, 0, tela.width, tela.height);
+      URL.revokeObjectURL(url);
+      tela.toBlob((b) => (b ? resolve(b) : reject(new Error('sem imagem'))), 'image/png');
+    };
+    im.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('não é uma imagem'));
+    };
+    im.src = url;
+  });
 }

@@ -210,9 +210,24 @@ async function abrir(id) {
 // A citação entra no editor já como HTML — e passa pela mesma limpeza que
 // tudo o resto. Citar uma mensagem hostil não pode ser a maneira de a
 // executar na página de quem responde.
+// Uma imagem citada aponta para um anexo da mensagem ORIGINAL, que está
+// na pasta de quem a escreveu. Arrastá-la para a resposta era pedir para
+// enviar um ficheiro que não é meu — e o servidor recusa, com razão.
+// Fica a marca de que ali havia uma imagem.
+function semImagens(html) {
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = html;
+  doc.body.querySelectorAll('img').forEach((im) => {
+    const marca = doc.createElement('i');
+    marca.textContent = '[imagem]';
+    im.replaceWith(marca);
+  });
+  return doc.body.innerHTML;
+}
+
 function citar(m, quem) {
   const dentro = m.formato === 'html'
-    ? limparHtml(m.corpo)
+    ? semImagens(limparHtml(m.corpo))
     : '<p>' + esc(m.corpo).replace(/\n/g, '<br>') + '</p>';
   return '<p><br></p><blockquote><p>' + esc(quem) + ' escreveu a '
     + esc(formatarDataHora(m.criada_em)) + ':</p>' + dentro + '</blockquote>';
@@ -243,8 +258,9 @@ const campoUrl = document.getElementById('url-ligacao');
 
 let respostaA = null;
 let contactosCarregados = false;
-let anexos = [];        // { nome, tamanho, tipo, caminho, estado }
+let anexos = [];        // { nome, tamanho, tipo, caminho, estado, inline }
 let enviadaComSucesso = false;
+let assinaturaMestre = null;   // o caminho do molde, não o da cópia
 
 // ── o editor ───────────────────────────────────────────────────────
 // `execCommand` está marcado como obsoleto e não tem substituto: a API que
@@ -254,7 +270,10 @@ let enviadaComSucesso = false;
 try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) { /* browser antigo */ }
 
 function marcarVazio() {
-  editor.dataset.vazio = String(editor.textContent.trim() === '');
+  // Uma imagem não tem textContent. Sem esta segunda condição, a dica
+  // ficava escrita por cima da assinatura acabada de inserir.
+  const vazio = editor.textContent.trim() === '' && !editor.querySelector('img');
+  editor.dataset.vazio = String(vazio);
 }
 
 function actualizarBarra() {
@@ -354,6 +373,14 @@ campoUrl.addEventListener('keydown', (ev) => {
 const MAX_ANEXO = 5 * 1024 * 1024;
 const MAX_ANEXOS = 5;
 
+// A pasta é um uuid para dois ficheiros com o mesmo nome não se
+// pisarem — e o `upsert` fica desligado por isso mesmo.
+function novaPasta() {
+  return (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 // Alguns sistemas entregam o ficheiro sem tipo. O bucket só aceita uma
 // lista de tipos, por isso um ficheiro sem tipo era recusado sem razão —
 // deduz-se pela extensão, que é o que o resto do mundo também faz.
@@ -375,8 +402,12 @@ function tipoDe(ficheiro) {
 }
 
 function desenharAnexosDoEditor() {
-  document.getElementById('ajuda-anexos').hidden = anexos.length === 0;
-  elAnexos.innerHTML = anexos.map((a, i) => `
+  // Uma imagem do corpo já se vê no corpo; mostrá-la também como ficha
+  // era dizer duas vezes a mesma coisa. O índice guardado é o da lista
+  // toda, para o botão de tirar continuar a apontar ao sítio certo.
+  const soltos = anexos.map((a, i) => ({ a, i })).filter((x) => !x.a.inline);
+  document.getElementById('ajuda-anexos').hidden = soltos.length === 0;
+  elAnexos.innerHTML = soltos.map(({ a, i }) => `
     <span class="am-anexo" data-estado="${a.estado}">
       <span class="am-icone am-icone-16 ${iconeDoTipo(a.tipo)}" aria-hidden="true"></span>
       <span class="nome">${esc(a.nome)}</span>
@@ -429,13 +460,13 @@ campoFicheiros.addEventListener('change', async () => {
 
 async function juntarFicheiros(ficheiros) {
   for (const f of ficheiros) {
-    if (anexos.length >= MAX_ANEXOS) {
+    if (anexos.filter((a) => !a.inline).length >= MAX_ANEXOS) {
       mostrarMsg(msgNova, `No máximo ${MAX_ANEXOS} anexos por mensagem.`, 'aviso');
       break;
     }
     const item = {
       nome: nomeSeguro(f.name), tamanho: f.size, tipo: tipoDe(f),
-      caminho: null, estado: 'a-enviar', erro: null,
+      caminho: null, estado: 'a-enviar', erro: null, inline: false,
     };
 
     if (f.size > MAX_ANEXO) {
@@ -449,12 +480,7 @@ async function juntarFicheiros(ficheiros) {
     anexos.push(item);
     desenharAnexosDoEditor();
 
-    // A pasta é um uuid para dois ficheiros com o mesmo nome não se
-    // pisarem — e o `upsert` fica desligado por isso mesmo.
-    const pasta = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : Date.now().toString(36) + Math.random().toString(36).slice(2);
-    const caminho = estado.eu + '/' + pasta + '/' + item.nome;
+    const caminho = estado.eu + '/' + novaPasta() + '/' + item.nome;
 
     const { error } = await sb.storage.from('correio')
       .upload(caminho, f, { contentType: item.tipo || 'application/octet-stream' });
@@ -470,6 +496,190 @@ async function juntarFicheiros(ficheiros) {
   }
 }
 
+// ── imagens dentro do corpo ────────────────────────────────────────
+// Uma imagem do corpo é um anexo como os outros — só que, em vez de
+// aparecer na lista lá em baixo, é desenhada no meio do texto. O corpo
+// guarda `data-anexo="<caminho>"` e nunca um endereço; ver o sql/0005.
+const campoImagens = document.getElementById('imagens');
+
+document.getElementById('btn-imagem').addEventListener('click', () => campoImagens.click());
+
+campoImagens.addEventListener('change', async () => {
+  const f = (campoImagens.files || [])[0];
+  campoImagens.value = '';
+  if (!f) return;
+
+  if (!/^image\//.test(f.type)) {
+    mostrarMsg(msgNova, 'Isso não é uma imagem.', 'erro');
+    return;
+  }
+  if (f.size > MAX_ANEXO) {
+    mostrarMsg(msgNova, 'A imagem tem mais de 5 MB.', 'erro');
+    return;
+  }
+
+  mostrarMsg(msgNova, 'A carregar a imagem…');
+  const nome = nomeSeguro(f.name);
+  const caminho = estado.eu + '/' + novaPasta() + '/' + nome;
+  const { error } = await sb.storage.from('correio')
+    .upload(caminho, f, { contentType: f.type });
+  if (error) {
+    mostrarMsg(msgNova, 'Não foi possível carregar a imagem.', 'erro');
+    return;
+  }
+
+  anexos.push({ nome, tamanho: f.size, tipo: f.type, caminho,
+                estado: 'pronto', erro: null, inline: true });
+  editor.focus();
+  document.execCommand('insertHTML', false,
+    '<img data-anexo="' + esc(caminho) + '" alt="' + esc(nome) + '">');
+  await resolverImagens(editor, anexos);
+  mostrarMsg(msgNova, '');
+  marcarVazio();
+});
+
+// Ao enviar, deitar fora as imagens que foram carregadas e depois apagadas
+// do texto. Sem isto ficavam no Storage para sempre, sem nada a mostrá-las.
+async function podarInline(corpoHtml) {
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = corpoHtml;
+  const usadas = new Set(Array.from(doc.body.querySelectorAll('img[data-anexo]'))
+    .map((im) => im.getAttribute('data-anexo')));
+
+  const sobras = anexos.filter((a) => a.inline && a.caminho && !usadas.has(a.caminho));
+  if (!sobras.length) return;
+  anexos = anexos.filter((a) => !(a.inline && a.caminho && !usadas.has(a.caminho)));
+  await sb.storage.from('correio').remove(sobras.map((a) => a.caminho));
+}
+
+// ── a minha assinatura ─────────────────────────────────────────────
+// O molde vive em `<cédula>/assinatura/<uuid>.png` e é só meu. O que
+// viaja dentro de cada mensagem é uma CÓPIA: assim a mensagem guarda a
+// assinatura com que foi enviada, e trocá-la hoje não reescreve o que se
+// mandou no mês passado. São uns kilobytes por mensagem.
+const msgAssinatura = document.getElementById('msg-assinatura');
+
+async function carregarAssinatura() {
+  const { data } = await sb.from('correio_assinaturas').select('caminho').maybeSingle();
+  assinaturaMestre = data ? data.caminho : null;
+}
+
+async function mostrarAssinatura() {
+  const caixa = document.getElementById('assinatura-mostra');
+  const btnTirar = document.getElementById('btn-tirar-assinatura');
+
+  if (!assinaturaMestre) {
+    caixa.innerHTML = '<p>Ainda não tem assinatura.</p>';
+    btnTirar.hidden = true;
+    return;
+  }
+  btnTirar.hidden = false;
+  const { data } = await sb.storage.from('correio').createSignedUrl(assinaturaMestre, 600);
+  caixa.innerHTML = data && data.signedUrl
+    ? '<img src="' + esc(data.signedUrl) + '" alt="A sua assinatura" />'
+    : '<p>Não foi possível mostrar a imagem.</p>';
+}
+
+document.getElementById('btn-minha-assinatura').addEventListener('click', async () => {
+  mostrarMsg(msgAssinatura, '');
+  abrirJanela('janela-assinatura');
+  await mostrarAssinatura();
+});
+
+document.getElementById('btn-escolher-assinatura')
+  .addEventListener('click', () => document.getElementById('ficheiro-assinatura').click());
+
+document.getElementById('ficheiro-assinatura').addEventListener('change', async (ev) => {
+  const f = (ev.target.files || [])[0];
+  ev.target.value = '';
+  if (!f) return;
+
+  mostrarMsg(msgAssinatura, 'A preparar a imagem…');
+  let imagem;
+  try {
+    imagem = await reduzirImagem(f, 600, 200);
+  } catch (e) {
+    mostrarMsg(msgAssinatura, 'Esse ficheiro não é uma imagem.', 'erro');
+    return;
+  }
+
+  const caminho = estado.eu + '/assinatura/' + novaPasta() + '.png';
+  const { error } = await sb.storage.from('correio')
+    .upload(caminho, imagem, { contentType: 'image/png' });
+  if (error) {
+    mostrarMsg(msgAssinatura, 'Não foi possível carregar a imagem.', 'erro');
+    return;
+  }
+
+  const r = await api('correio_assinatura_guardar', { p_caminho: caminho });
+  if (!r.ok) {
+    // Não deixar no Storage uma imagem que a base recusou.
+    await sb.storage.from('correio').remove([caminho]);
+    mostrarMsg(msgAssinatura, r.erro, 'erro');
+    return;
+  }
+  if (r.dados.anterior) await sb.storage.from('correio').remove([r.dados.anterior]);
+
+  assinaturaMestre = caminho;
+  await mostrarAssinatura();
+  mostrarMsg(msgAssinatura, 'Assinatura guardada. Passa a ir nas suas mensagens.', 'ok');
+});
+
+document.getElementById('btn-tirar-assinatura').addEventListener('click', async () => {
+  const r = await api('correio_assinatura_apagar', {});
+  if (!r.ok) {
+    mostrarMsg(msgAssinatura, r.erro, 'erro');
+    return;
+  }
+  // As cópias já enviadas ficam: o que se apaga é o molde, não o passado.
+  if (r.dados.anterior) await sb.storage.from('correio').remove([r.dados.anterior]);
+  assinaturaMestre = null;
+  await mostrarAssinatura();
+  mostrarMsg(msgAssinatura, 'Assinatura removida.', 'ok');
+});
+
+async function copiarAssinaturaParaMensagem() {
+  if (!assinaturaMestre) return null;
+  const destino = estado.eu + '/' + novaPasta() + '/assinatura.png';
+  const { error } = await sb.storage.from('correio').copy(assinaturaMestre, destino);
+  if (error) return null;
+  anexos.push({ nome: 'assinatura.png', tamanho: 0, tipo: 'image/png',
+                caminho: destino, estado: 'pronto', erro: null, inline: true });
+  return destino;
+}
+
+function htmlDaAssinatura(caminho) {
+  return '<p><br></p><p><img data-anexo="' + esc(caminho)
+    + '" data-papel="assinatura" alt="Assinatura"></p>';
+}
+
+async function porAssinaturaNoEditor(antesDaCitacao) {
+  if (!assinaturaMestre) return;
+  if (editor.querySelector('img[data-papel="assinatura"]')) return;
+  const caminho = await copiarAssinaturaParaMensagem();
+  if (!caminho) return;
+
+  const citacao = antesDaCitacao ? editor.querySelector('blockquote') : null;
+  if (citacao) citacao.insertAdjacentHTML('beforebegin', htmlDaAssinatura(caminho));
+  else editor.insertAdjacentHTML('beforeend', htmlDaAssinatura(caminho));
+
+  await resolverImagens(editor, anexos);
+  marcarVazio();
+}
+
+// Pôr a assinatura à mão, para quem a apagou e se arrependeu.
+document.getElementById('btn-assinar').addEventListener('click', async () => {
+  if (!assinaturaMestre) {
+    mostrarMsg(msgNova, 'Ainda não definiu a sua assinatura — veja na barra lateral.', 'aviso');
+    return;
+  }
+  if (editor.querySelector('img[data-papel="assinatura"]')) {
+    mostrarMsg(msgNova, 'A assinatura já está na mensagem.', 'aviso');
+    return;
+  }
+  await porAssinaturaNoEditor(false);
+});
+
 // ── abrir e enviar ─────────────────────────────────────────────────
 async function carregarContactos() {
   if (contactosCarregados) return;
@@ -481,7 +691,7 @@ async function carregarContactos() {
   contactosCarregados = true;
 }
 
-function abrirNova(opcoes) {
+async function abrirNova(opcoes) {
   const o = opcoes || {};
   respostaA = o.respostaA || null;
   enviadaComSucesso = false;
@@ -499,6 +709,7 @@ function abrirNova(opcoes) {
 
   carregarContactos();
   abrirJanela('janela-nova');
+  await porAssinaturaNoEditor(!!o.citado);
 
   if (o.para) {
     // Numa resposta, o cursor vai para cima da citação: é aí que se escreve.
@@ -535,7 +746,12 @@ document.getElementById('form-nova').addEventListener('submit', async (ev) => {
     mostrarMsg(msgNova, 'Tire os anexos que falharam antes de enviar.', 'erro');
     return;
   }
-  if (editor.textContent.trim() === '') {
+  // Uma mensagem só com a assinatura continua a ser uma mensagem vazia:
+  // a assinatura foi posta pela app, não é nada que a pessoa quisesse
+  // dizer. Já uma imagem que ela inseriu conta como conteúdo.
+  const temTexto = editor.textContent.trim() !== '';
+  const temImagem = !!editor.querySelector('img:not([data-papel="assinatura"])');
+  if (!temTexto && !temImagem) {
     mostrarMsg(msgNova, 'A mensagem está vazia.', 'erro');
     editor.focus();
     return;
@@ -544,15 +760,18 @@ document.getElementById('form-nova').addEventListener('submit', async (ev) => {
   btn.disabled = true;
   mostrarMsg(msgNova, 'A enviar…');
 
+  // Limpo aqui e recusado outra vez no servidor. Não é desconfiança do
+  // editor: é que o servidor não pode acreditar em nada que venha daqui.
+  const corpo = limparHtml(editor.innerHTML);
+  await podarInline(corpo);
+
   const r = await api('correio_enviar', {
     p_para_cedula: campoPara.value.trim(),
     p_assunto: campoAssunto.value,
-    // Limpo aqui e recusado outra vez no servidor. Não é desconfiança do
-    // editor: é que o servidor não pode acreditar em nada que venha daqui.
-    p_corpo: limparHtml(editor.innerHTML),
+    p_corpo: corpo,
     p_resposta_a: respostaA,
     p_formato: 'html',
-    p_anexos: anexos.map((a) => a.caminho),
+    p_anexos: anexos.map((a) => ({ caminho: a.caminho, inline: !!a.inline })),
   });
   btn.disabled = false;
 
@@ -644,6 +863,7 @@ async function entrar() {
   estado.eu = ctx.pessoa.cedula;
 
   limparLeitura();
+  await carregarAssinatura();
   await carregar(false);
   await ligarRealtime(ctx.pessoa.cedula);
 }

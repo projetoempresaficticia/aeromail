@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="am-versao" content="2b3493f2c3d4" />
+  <meta name="am-versao" content="c6278be8a35a" />
   <title>AeroMail</title>
   <link rel="icon" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="web/biblioteca/am.css?v=2d3d7f41" />
+  <link rel="stylesheet" href="web/biblioteca/am.css?v=7fdb817b" />
 </head>
 <body>
 
@@ -87,6 +87,9 @@
 
       <div class="am-empurra"></div>
       <hr />
+      <button type="button" class="am-nav" id="btn-minha-assinatura">
+        <span class="am-icone i-rascunho" aria-hidden="true"></span>A minha assinatura
+      </button>
       <div style="padding:0 8px 8px">
         <div style="font-weight:600;font-size:13.5px" id="nome-quem">—</div>
         <div class="mono am-suave" style="font-size:12px" id="cedula-quem"></div>
@@ -184,6 +187,14 @@
 
             <span class="risca" aria-hidden="true"></span>
 
+            <button type="button" id="btn-imagem" title="Imagem no corpo"
+                    aria-label="Inserir imagem no corpo">
+              <span class="am-icone am-icone-16 i-imagem" aria-hidden="true"></span>
+            </button>
+            <button type="button" id="btn-assinar" title="Pôr a minha assinatura"
+                    aria-label="Pôr a minha assinatura">
+              <span class="am-icone am-icone-16 i-rascunho" aria-hidden="true"></span>
+            </button>
             <button type="button" id="btn-anexar" title="Anexar ficheiro"
                     aria-label="Anexar ficheiro">
               <span class="am-icone am-icone-16 i-anexo" aria-hidden="true"></span>
@@ -206,6 +217,7 @@
                aria-multiline="true" aria-labelledby="rotulo-corpo"
                data-dica="Escreva aqui." data-vazio="true"></div>
 
+          <input type="file" id="imagens" hidden accept="image/*" />
           <input type="file" id="ficheiros" multiple hidden
                  accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.csv,.xml,.zip,.doc,.docx,.xls,.xlsx" />
           <div class="am-anexos" id="anexos"></div>
@@ -228,10 +240,58 @@
     </form>
   </dialog>
 
+  <!-- ══ A MINHA ASSINATURA ════════════════════════════════════════════ -->
+  <dialog id="janela-assinatura" aria-labelledby="titulo-assinatura">
+    <div class="am-janela-cabeca">
+      <h2 id="titulo-assinatura">A minha assinatura</h2>
+      <button type="button" class="am-botao am-botao-fantasma"
+              data-fechar="janela-assinatura" aria-label="Fechar">
+        <span class="am-icone i-fechar" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="am-janela-corpo">
+      <p class="am-suave" style="margin-bottom:16px">
+        Uma imagem que passa a ir no fim das mensagens que escrever. Serve
+        para o nome manuscrito ou para um cartão com o cargo e a empresa.
+      </p>
+
+      <div class="am-assinatura-mostra" id="assinatura-mostra">
+        <p>Ainda não tem assinatura.</p>
+      </div>
+
+      <div class="am-nota" style="margin-bottom:16px">
+        <span class="am-icone am-icone-16 i-aviso" aria-hidden="true"></span>
+        <span>
+          <b>Isto não assina documentos.</b> É uma imagem numa mensagem, como
+          o nome escrito no fim de uma carta. Quem assina a sério é o
+          Subsight, que sela o documento com um hash e regista quem assinou —
+          e é o Cartório que lhe dá fé pública.
+        </span>
+      </div>
+
+      <input type="file" id="ficheiro-assinatura" hidden accept="image/*" />
+      <p class="am-ajuda">
+        PNG com fundo transparente fica melhor. A imagem é reduzida para
+        600×200 antes de ser guardada.
+      </p>
+      <p class="am-msg" id="msg-assinatura"></p>
+    </div>
+
+    <div class="am-janela-pe">
+      <button type="button" class="am-botao am-botao-linha" id="btn-tirar-assinatura" hidden>
+        <span class="am-icone i-lixo" aria-hidden="true"></span>Remover
+      </button>
+      <button type="button" class="am-botao" id="btn-escolher-assinatura">
+        <span class="am-icone i-imagem" aria-hidden="true"></span>Escolher imagem
+      </button>
+    </div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://projetoempresaficticia.github.io/pp-base/web/comum.js"></script>
-  <script src="web/biblioteca/am.js?v=63655f40"></script>
+  <script src="web/biblioteca/am.js?v=5f271a58"></script>
   <script src="web/atualizar.js?v=aa6e1041"></script>
-  <script src="app.js?v=f199b511"></script>
+  <script src="app.js?v=482cf848"></script>
 </body>
 </html>

@@ -401,3 +401,38 @@ a.am-anexo:hover, button.am-anexo:hover {
 .am-anexo[data-estado="a-enviar"] { opacity: .6; }
 .am-anexo[data-estado="erro"] { border-color: var(--am-erro); color: var(--am-erro);
                                 background: var(--am-erro-veu); }
+
+/* ── imagens dentro do corpo ───────────────────────────────────────
+   O `src` destas nunca vem da mensagem: vem da app, que o preenche com um
+   endereço assinado ao desenhar. Ver o comentário no sql/0005. */
+.am-editor img, .am-corpo img {
+  max-width: 100%; height: auto; border-radius: 6px; vertical-align: middle;
+}
+/* Uma assinatura é pequena por definição. Sem este limite, uma fotografia
+   do telemóvel entrava com 3000px e empurrava a mensagem toda para baixo. */
+.am-editor img[data-papel="assinatura"], .am-corpo img[data-papel="assinatura"] {
+  max-height: 90px; width: auto; border-radius: 0;
+}
+.am-imagem-perdida {
+  display: inline-block; padding: 6px 10px; border: 1px dashed var(--am-borda);
+  border-radius: var(--am-r); color: var(--am-secundario); font-size: 12.5px;
+}
+
+/* ── a minha assinatura ────────────────────────────────────────────── */
+.am-assinatura-mostra {
+  display: grid; place-items: center; min-height: 110px; padding: var(--am-e4);
+  background: var(--am-fundo); border: 1px dashed var(--am-borda);
+  border-radius: var(--am-r); margin-bottom: var(--am-e4);
+}
+.am-assinatura-mostra img { max-height: 90px; max-width: 100%; }
+.am-assinatura-mostra p { color: var(--am-secundario); font-size: 13px; }
+
+/* O aviso que separa isto da assinatura digital do Subsight. Fundo de cor,
+   texto escuro: a cor clara é preenchimento, nunca letra. */
+.am-nota {
+  display: flex; gap: var(--am-e3); align-items: flex-start;
+  padding: var(--am-e3) var(--am-e4); border-radius: var(--am-r);
+  background: var(--am-aviso-veu); color: var(--am-aviso);
+  font-size: 13px; line-height: 1.5;
+}
+.am-nota .am-icone { margin-top: 1px; flex-shrink: 0; }
