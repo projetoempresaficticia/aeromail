@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="am-versao" content="2dff2f14c0e5" />
+  <title>AeroMail</title>
+  <link rel="icon" href="favicon-32.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="web/biblioteca/am.css?v=1892fb53" />
+</head>
+<body>
+
+  <!-- ══ ENTRADA ═══════════════════════════════════════════════════════ -->
+  <div id="area-entrada" class="am-entrada" hidden>
+    <div class="am-entrada-cartao">
+      <div class="am-entrada-marca">
+        <picture>
+          <source srcset="web/marca/am-marca.webp" type="image/webp" />
+          <img src="web/marca/am-marca.png" alt="" width="44" height="44" />
+        </picture>
+        <span>AeroMail<small>Prepara Portugal</small></span>
+      </div>
+
+      <h1>Entrar</h1>
+      <p class="am-suave">
+        O correio interno do ecossistema. Aqui chegam os avisos dos órgãos
+        quando uma entrega é aprovada — e as mensagens de quem trabalha
+        consigo.
+      </p>
+
+      <form id="form-login">
+        <div class="am-campo">
+          <label for="email">Email de login</label>
+          <input id="email" type="email" required autocomplete="username"
+                 placeholder="nome@prepara.pt" />
+        </div>
+
+        <div class="am-campo am-campo-senha">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" required autocomplete="current-password"
+                 placeholder="A sua senha" />
+          <button type="button" class="am-ver-senha" id="btn-ver-senha"
+                  aria-pressed="false" aria-controls="senha">Mostrar</button>
+        </div>
+
+        <button type="submit" class="am-botao" style="width:100%">
+          <span class="am-icone i-enviar" aria-hidden="true"></span>Entrar
+        </button>
+        <p class="am-msg" id="msg-login"></p>
+      </form>
+
+      <p class="am-ajuda">Esqueceu-se da senha? Peça ao professor para a repor.</p>
+    </div>
+  </div>
+
+  <!-- ══ APLICAÇÃO ═════════════════════════════════════════════════════ -->
+  <div id="area-app" class="am-app" hidden>
+
+    <aside class="am-lateral">
+      <div class="am-marca">
+        <picture>
+          <source srcset="web/marca/am-marca.webp" type="image/webp" />
+          <img src="web/marca/am-marca.png" alt="" width="26" height="26" />
+        </picture>
+        <span>AeroMail</span>
+      </div>
+
+      <button type="button" class="am-botao" id="btn-nova" style="margin-bottom:12px">
+        <span class="am-icone i-nova" aria-hidden="true"></span>Nova mensagem
+      </button>
+
+      <nav aria-label="Caixas">
+        <button type="button" class="am-nav" data-caixa="entrada" aria-current="true">
+          <span class="am-icone i-envelope" aria-hidden="true"></span>
+          Entrada
+          <span class="am-conta" id="conta-por-ler"></span>
+        </button>
+        <button type="button" class="am-nav" data-caixa="enviados">
+          <span class="am-icone i-enviar" aria-hidden="true"></span>
+          Enviados
+        </button>
+      </nav>
+
+      <div class="am-empurra"></div>
+      <hr />
+      <div style="padding:0 8px 8px">
+        <div style="font-weight:600;font-size:13.5px" id="nome-quem">—</div>
+        <div class="mono am-suave" style="font-size:12px" id="cedula-quem"></div>
+      </div>
+      <button type="button" class="am-nav" id="btn-sair">
+        <span class="am-icone i-sair" aria-hidden="true"></span>Sair
+      </button>
+    </aside>
+
+    <!-- lista ─────────────────────────────────────────────────────── -->
+    <section class="am-coluna" aria-label="Mensagens">
+      <div class="am-coluna-topo">
+        <div class="am-fila" style="justify-content:space-between;margin-bottom:12px">
+          <h2 id="titulo-caixa">Entrada</h2>
+          <label class="am-fila" style="gap:6px;font-size:12.5px;cursor:pointer">
+            <input type="checkbox" id="so-por-ler" /> Só por ler
+          </label>
+        </div>
+        <div class="am-campo am-busca" style="margin:0">
+          <span class="lupa i-procurar" aria-hidden="true"></span>
+          <label class="am-sobre" for="procura" style="position:absolute;left:-9999px">Procurar</label>
+          <input id="procura" type="search" placeholder="Procurar no assunto, no texto ou no nome" />
+        </div>
+      </div>
+      <div class="am-rolavel" id="lista"></div>
+    </section>
+
+    <!-- leitura ───────────────────────────────────────────────────── -->
+    <section class="am-leitura" id="leitura" aria-label="Mensagem"></section>
+  </div>
+
+  <!-- ══ NOVA MENSAGEM ═════════════════════════════════════════════════ -->
+  <dialog id="janela-nova" aria-labelledby="titulo-nova">
+    <form id="form-nova" method="dialog">
+      <div class="am-janela-cabeca">
+        <h2 id="titulo-nova">Nova mensagem</h2>
+        <button type="button" class="am-botao am-botao-fantasma" data-fechar="janela-nova"
+                aria-label="Fechar">
+          <span class="am-icone i-fechar" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="am-janela-corpo">
+        <div class="am-campo">
+          <label for="para">Para</label>
+          <input id="para" list="contactos" required autocomplete="off"
+                 placeholder="Nome ou cédula (PP-2026-00011)" />
+          <datalist id="contactos"></datalist>
+          <p class="nota am-suave" id="nota-para">
+            Escreva o nome e escolha da lista. Vai enviada a cédula, não o nome.
+          </p>
+        </div>
+
+        <div class="am-campo">
+          <label for="assunto">Assunto</label>
+          <input id="assunto" required maxlength="200" placeholder="Do que se trata" />
+        </div>
+
+        <div class="am-campo" style="margin:0">
+          <label for="corpo">Mensagem</label>
+          <textarea id="corpo" required maxlength="20000"
+                    placeholder="Escreva aqui."></textarea>
+        </div>
+
+        <p class="am-msg" id="msg-nova"></p>
+      </div>
+
+      <div class="am-janela-pe">
+        <button type="button" class="am-botao am-botao-linha" data-fechar="janela-nova">
+          Cancelar
+        </button>
+        <button type="submit" class="am-botao" id="btn-enviar">
+          <span class="am-icone i-enviar" aria-hidden="true"></span>Enviar
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://projetoempresaficticia.github.io/pp-base/web/comum.js"></script>
+  <script src="web/biblioteca/am.js?v=cb9f9ffb"></script>
+  <script src="web/atualizar.js?v=aa6e1041"></script>
+  <script src="app.js?v=7a56a4a9"></script>
+</body>
+</html>
