@@ -14,7 +14,13 @@ Ainda só tem a **biblioteca de design**: `biblioteca.html`.
   português vive nas classes `.i-*` do CSS, que é para isso que a máscara
   serve de indireção.
 
-A tabela `correio` e o Realtime já existem na base; faltam as políticas de
-RLS (hoje nega tudo) e as quatro RPC.
+## SQL
+
+- `0001_correio.sql` — políticas de RLS (a tabela tinha RLS ligada e zero
+  políticas, ou seja negava tudo) e as três RPC: enviar, caixa, marcar lido.
+  O remetente sai sempre de `auth.uid()`, nunca de um parâmetro.
+- `0002_notifica_submissao.sql` — os órgãos passam a avisar **quem submeteu
+  e quem assinou**, por gatilho no protocolo. Nenhum órgão sabe que o
+  correio existe.
 
 Antes chamava-se `pp-correio`.
