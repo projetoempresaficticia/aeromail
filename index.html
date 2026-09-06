@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="am-versao" content="2dff2f14c0e5" />
+  <meta name="am-versao" content="2b3493f2c3d4" />
   <title>AeroMail</title>
   <link rel="icon" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="web/biblioteca/am.css?v=1892fb53" />
+  <link rel="stylesheet" href="web/biblioteca/am.css?v=2d3d7f41" />
 </head>
 <body>
 
@@ -146,9 +146,72 @@
         </div>
 
         <div class="am-campo" style="margin:0">
-          <label for="corpo">Mensagem</label>
-          <textarea id="corpo" required maxlength="20000"
-                    placeholder="Escreva aqui."></textarea>
+          <label for="corpo" id="rotulo-corpo">Mensagem</label>
+
+          <div class="am-ferramentas" role="toolbar" aria-label="Formatação">
+            <button type="button" class="b" data-cmd="bold" title="Negrito (Ctrl+B)"
+                    aria-label="Negrito" aria-pressed="false">B</button>
+            <button type="button" class="i" data-cmd="italic" title="Itálico (Ctrl+I)"
+                    aria-label="Itálico" aria-pressed="false">I</button>
+            <button type="button" class="u" data-cmd="underline" title="Sublinhado (Ctrl+U)"
+                    aria-label="Sublinhado" aria-pressed="false">U</button>
+            <button type="button" class="s" data-cmd="strikeThrough" title="Rasurado"
+                    aria-label="Rasurado" aria-pressed="false">S</button>
+
+            <span class="risca" aria-hidden="true"></span>
+
+            <button type="button" data-cmd="insertUnorderedList" title="Lista"
+                    aria-label="Lista" aria-pressed="false">
+              <span class="am-icone am-icone-16 i-lista" aria-hidden="true"></span>
+            </button>
+            <button type="button" data-cmd="insertOrderedList" title="Lista numerada"
+                    aria-label="Lista numerada" aria-pressed="false">
+              <span class="am-icone am-icone-16 i-lista-num" aria-hidden="true"></span>
+            </button>
+            <button type="button" data-cmd="formatBlock:blockquote" title="Citação"
+                    aria-label="Citação">&#8220;</button>
+
+            <span class="risca" aria-hidden="true"></span>
+
+            <button type="button" id="btn-ligacao" title="Inserir ligação"
+                    aria-label="Inserir ligação">
+              <span class="am-icone am-icone-16 i-ligacao" aria-hidden="true"></span>
+            </button>
+            <button type="button" data-cmd="unlink" title="Tirar a ligação"
+                    aria-label="Tirar a ligação">&#8856;</button>
+            <button type="button" data-cmd="removeFormat" title="Limpar a formatação"
+                    aria-label="Limpar a formatação">T<sub>x</sub></button>
+
+            <span class="risca" aria-hidden="true"></span>
+
+            <button type="button" id="btn-anexar" title="Anexar ficheiro"
+                    aria-label="Anexar ficheiro">
+              <span class="am-icone am-icone-16 i-anexo" aria-hidden="true"></span>
+              Anexar
+            </button>
+          </div>
+
+          <div class="am-ligacao" id="linha-ligacao" hidden>
+            <label class="am-sobre" for="url-ligacao">Endereço</label>
+            <input id="url-ligacao" type="url" placeholder="https://…" />
+            <button type="button" class="am-botao" id="btn-aplicar-ligacao">Aplicar</button>
+            <button type="button" class="am-botao am-botao-linha"
+                    id="btn-cancelar-ligacao">Cancelar</button>
+          </div>
+
+          <!-- contenteditable e não <textarea>: é o que dá negrito, listas e
+               ligações sem passo de compilação. O que sai daqui é limpo por
+               lista branca antes de sair, e outra vez antes de ser desenhado. -->
+          <div class="am-editor" id="corpo" contenteditable="true" role="textbox"
+               aria-multiline="true" aria-labelledby="rotulo-corpo"
+               data-dica="Escreva aqui." data-vazio="true"></div>
+
+          <input type="file" id="ficheiros" multiple hidden
+                 accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.csv,.xml,.zip,.doc,.docx,.xls,.xlsx" />
+          <div class="am-anexos" id="anexos"></div>
+          <p class="am-ajuda" id="ajuda-anexos" hidden>
+            Até 5 ficheiros, 5 MB cada.
+          </p>
         </div>
 
         <p class="am-msg" id="msg-nova"></p>
@@ -167,8 +230,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://projetoempresaficticia.github.io/pp-base/web/comum.js"></script>
-  <script src="web/biblioteca/am.js?v=cb9f9ffb"></script>
+  <script src="web/biblioteca/am.js?v=63655f40"></script>
   <script src="web/atualizar.js?v=aa6e1041"></script>
-  <script src="app.js?v=7a56a4a9"></script>
+  <script src="app.js?v=f199b511"></script>
 </body>
 </html>

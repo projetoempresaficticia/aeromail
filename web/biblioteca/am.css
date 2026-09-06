@@ -97,6 +97,14 @@ a { color: var(--am-primaria); }
 .i-ajuda        { --i: url(../icones/info-circle.svg); }
 .i-descarregar  { --i: url(../icones/download-2.svg); }
 .i-voltar       { --i: url(../icones/left-2.svg); }
+.i-imagem       { --i: url(../icones/image.svg); }
+.i-documento    { --i: url(../icones/document.svg); }
+.i-ligacao      { --i: url(../icones/link.svg); }
+/* As duas listas são desenhadas aqui e não vêm do Figma: o conjunto
+   descarregado (User Interface + Arrows) não traz ícone de lista, e usar
+   outro qualquer era dar-lhe um significado que ele não tem. */
+.i-lista        { --i: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='4.5' cy='6' r='1.7'/><circle cx='4.5' cy='12' r='1.7'/><circle cx='4.5' cy='18' r='1.7'/><rect x='9' y='5' width='11' height='2' rx='1'/><rect x='9' y='11' width='11' height='2' rx='1'/><rect x='9' y='17' width='11' height='2' rx='1'/></svg>"); }
+.i-lista-num    { --i: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text x='1' y='8.5' font-family='sans-serif' font-size='7.5'>1</text><text x='1' y='14.5' font-family='sans-serif' font-size='7.5'>2</text><text x='1' y='20.5' font-family='sans-serif' font-size='7.5'>3</text><rect x='9' y='5' width='11' height='2' rx='1'/><rect x='9' y='11' width='11' height='2' rx='1'/><rect x='9' y='17' width='11' height='2' rx='1'/></svg>"); }
 
 /* ── o esqueleto: barra, lista, leitura ────────────────────────────
    Três colunas, como qualquer correio. A leitura ao lado da lista e não
@@ -298,3 +306,98 @@ dialog::backdrop { background: rgba(32,39,37,.45); }
 }
 .am-voltar { display: none; }
 @media (max-width: 900px) { .am-voltar { display: inline-flex; } }
+
+/* ── editor de texto ───────────────────────────────────────────────
+   contenteditable com barra de ferramentas. Sem passo de compilação não há
+   editor de biblioteca; e para negrito, itálico, listas e ligações o que o
+   browser já traz chega. O que NÃO chega é confiar no que sai daqui — o
+   corpo é limpo por lista branca ao guardar e outra vez ao desenhar. */
+.am-ferramentas {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 6px;
+  border: 1px solid var(--am-borda); border-bottom: 0;
+  border-radius: var(--am-r) var(--am-r) 0 0; background: var(--am-sidebar);
+}
+.am-ferramentas button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 34px; height: 32px; padding: 0 8px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--am-tinta);
+  font: 600 14px/1 var(--am-fonte); cursor: pointer;
+}
+.am-ferramentas button:hover { background: var(--am-selecionado); }
+.am-ferramentas button[aria-pressed="true"] {
+  background: var(--am-selecionado); color: var(--am-primaria);
+}
+.am-ferramentas button:focus-visible { outline: 2px solid var(--am-primaria); outline-offset: -2px; }
+.am-ferramentas .risca { width: 1px; height: 22px; background: var(--am-borda); margin: 5px 4px; }
+.am-ferramentas .b { font-weight: 800; }
+.am-ferramentas .i { font-style: italic; font-family: Georgia, serif; }
+.am-ferramentas .u { text-decoration: underline; }
+.am-ferramentas .s { text-decoration: line-through; }
+
+.am-editor {
+  min-height: 180px; max-height: 40svh; overflow-y: auto;
+  padding: 12px var(--am-e4); background: #fff; color: var(--am-tinta);
+  border: 1px solid var(--am-borda); border-radius: 0 0 var(--am-r) var(--am-r);
+  font: 400 15px/1.6 var(--am-fonte);
+}
+.am-editor:focus { outline: none; border-color: var(--am-primaria);
+                   box-shadow: 0 0 0 3px rgba(15,118,110,.18); }
+/* A dica só aparece com o editor mesmo vazio. Um <p></p> deixado pelo
+   browser não conta como texto, e sem isto a dica ficava por cima dele. */
+.am-editor:empty::before,
+.am-editor[data-vazio="true"]::before {
+  content: attr(data-dica); color: var(--am-secundario); pointer-events: none;
+}
+
+/* O que se escreve e o que se lê têm de ter o mesmo aspeto: é a única
+   maneira de o editor ser honesto sobre o que vai sair do outro lado. */
+.am-editor p, .am-corpo p { margin: 0 0 10px; }
+.am-editor p:last-child, .am-corpo p:last-child { margin-bottom: 0; }
+.am-editor ul, .am-editor ol, .am-corpo ul, .am-corpo ol { margin: 0 0 10px; padding-left: 22px; }
+.am-editor li, .am-corpo li { margin-bottom: 3px; }
+.am-editor a, .am-corpo a { color: var(--am-primaria); }
+.am-editor blockquote, .am-corpo blockquote {
+  margin: 0 0 10px; padding: 2px 0 2px 14px;
+  border-left: 3px solid var(--am-borda); color: var(--am-secundario);
+}
+.am-corpo { font-size: 15px; line-height: 1.6; }
+/* Texto simples: as quebras de linha são o único formato que tem. */
+.am-corpo-texto { white-space: pre-wrap; }
+
+/* ── inserir ligação ───────────────────────────────────────────────── */
+.am-ligacao {
+  display: flex; gap: var(--am-e2); align-items: center; flex-wrap: wrap;
+  padding: var(--am-e2); border: 1px solid var(--am-borda); border-bottom: 0;
+  background: var(--am-fundo);
+}
+.am-ligacao input {
+  flex: 1; min-width: 160px; min-height: 34px; padding: 6px 10px;
+  border: 1px solid var(--am-borda); border-radius: 7px;
+  font: 400 14px/1.4 var(--am-fonte);
+}
+.am-ligacao button { min-height: 34px; padding: 0 12px; font-size: 13px; }
+
+/* ── anexos ───────────────────────────────────────────────────────── */
+.am-anexos { display: flex; flex-wrap: wrap; gap: var(--am-e2); margin-top: var(--am-e3); }
+.am-anexos:empty { display: none; }
+.am-anexo {
+  display: inline-flex; align-items: center; gap: var(--am-e2);
+  max-width: 100%; padding: 7px 10px; background: var(--am-fundo);
+  border: 1px solid var(--am-borda); border-radius: var(--am-r);
+  font-size: 13px; text-decoration: none; color: var(--am-tinta);
+}
+a.am-anexo:hover, button.am-anexo:hover {
+  background: var(--am-selecionado); border-color: var(--am-primaria);
+}
+.am-anexo .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                  max-width: 220px; font-weight: 500; }
+.am-anexo .peso { color: var(--am-secundario); font-size: 12px; white-space: nowrap; }
+.am-anexo .tirar {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  border: 0; border-radius: 50%; background: transparent; color: var(--am-secundario);
+  cursor: pointer; flex-shrink: 0;
+}
+.am-anexo .tirar:hover { background: var(--am-erro-veu); color: var(--am-erro); }
+.am-anexo[data-estado="a-enviar"] { opacity: .6; }
+.am-anexo[data-estado="erro"] { border-color: var(--am-erro); color: var(--am-erro);
+                                background: var(--am-erro-veu); }

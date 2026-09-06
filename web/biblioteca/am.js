@@ -169,3 +169,111 @@ function ligarFechos() {
   });
 }
 document.addEventListener('DOMContentLoaded', ligarFechos);
+
+// ── limpar HTML por lista branca ───────────────────────────────────
+// Desenhar no ecrã o HTML que outra pessoa escreveu é a porta clássica do
+// XSS. A limpeza faz-se num documento à parte, e não com innerHTML num
+// <div> da página: esse documento é INERTE — nada corre lá dentro, nem
+// sequer o `onerror` de uma <img> partida, que é o truque com que este tipo
+// de filtro costuma ser furado enquanto se escreve.
+//
+// Lista branca, nunca lista negra: o que não está aqui não passa. A função
+// correio_enviar recusa o mesmo conjunto do lado do servidor — são duas
+// peças a dizer o mesmo, de propósito.
+const AM_ETIQUETAS = {
+  B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, A: 1, BR: 1,
+  P: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1,
+};
+
+function limparNo(pai) {
+  Array.from(pai.childNodes).forEach((no) => {
+    if (no.nodeType === 3) return;                       // texto fica
+    if (no.nodeType !== 1) { no.remove(); return; }      // comentários fora
+
+    // Em maiúsculas de propósito. Uma <svg> ou <math> traz filhos de outro
+    // espaço de nomes, onde o tagName mantém a caixa original: lá dentro um
+    // <script> chama-se mesmo 'script', e comparar com 'SCRIPT' deixava-o
+    // cair no ramo de desembrulhar — o código dele ficava no ecrã como
+    // texto. Foi assim que o teste em jsdom o apanhou.
+    const etiqueta = String(no.tagName || '').toUpperCase();
+
+    limparNo(no);                                        // os filhos primeiro
+
+    if (etiqueta === 'SCRIPT' || etiqueta === 'STYLE') {
+      no.remove();                                       // aqui o mal é o conteúdo
+      return;
+    }
+    if (!AM_ETIQUETAS[etiqueta]) {
+      // Desembrulhar, não apagar: um <div> a mais nao devia comer o texto
+      // que estava lá dentro.
+      while (no.firstChild) pai.insertBefore(no.firstChild, no);
+      no.remove();
+      return;
+    }
+
+    // De atributos só sobrevive o href de uma <a>. Nada de style, nada de
+    // on*, nada de class: uma classe nossa numa mensagem de fora podia
+    // fazer-se passar por um aviso do sistema.
+    Array.from(no.attributes).forEach((at) => {
+      if (etiqueta === 'A' && at.name.toLowerCase() === 'href') return;
+      no.removeAttribute(at.name);
+    });
+
+    if (etiqueta === 'A') {
+      const h = (no.getAttribute('href') || '').trim();
+      if (!/^(https?:|mailto:)/i.test(h)) {
+        no.removeAttribute('href');                      // javascript:, data:, tudo
+      } else {
+        no.setAttribute('target', '_blank');
+        no.setAttribute('rel', 'noopener noreferrer nofollow');
+      }
+    }
+  });
+}
+
+function limparHtml(html) {
+  // `createHTMLDocument` e não `new DOMParser()`: o documento sai igualmente
+  // inerte, mas já vem com o <body> montado, sem depender de o analisador
+  // decidir bem onde meter um fragmento solto. A pôr à prova em jsdom, essa
+  // decisão mostrou não ser a mesma em toda a parte.
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = String(html == null ? '' : html);
+  limparNo(doc.body);
+  return doc.body.innerHTML;
+}
+
+// O corpo de uma mensagem, pronto a desenhar. Texto simples leva escape
+// total; HTML leva a lista branca. A decisão é do campo `formato`, que o
+// servidor guarda — nunca de adivinhar pelo conteúdo.
+function corpoDesenhado(corpo, formato) {
+  if (formato === 'html') {
+    return '<div class="am-corpo">' + limparHtml(corpo) + '</div>';
+  }
+  return '<div class="am-corpo am-corpo-texto">' + esc(corpo) + '</div>';
+}
+
+// ── ficheiros ──────────────────────────────────────────────────────
+function formatarTamanho(bytes) {
+  const n = Number(bytes || 0);
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+  return (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+}
+
+// O nome do ficheiro vira parte do caminho no Storage, e o caminho é de
+// onde a base tira o nome a mostrar. Tirar acentos e espaços aqui evita
+// caminhos que o Storage recusa — e o nome continua a ler-se.
+function nomeSeguro(nome) {
+  const n = String(nome || 'ficheiro')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-').replace(/^[-.]+/, '');
+  return (n || 'ficheiro').slice(-80);
+}
+
+function iconeDoTipo(tipo) {
+  const t = String(tipo || '');
+  if (t.startsWith('image/')) return 'i-imagem';
+  if (t === 'application/pdf') return 'i-documento';
+  return 'i-anexo';
+}
