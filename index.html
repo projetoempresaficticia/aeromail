@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="am-versao" content="6b6113163015" />
+  <meta name="am-versao" content="e549c49372c9" />
   <title>AeroMail</title>
   <link rel="icon" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="web/biblioteca/am.css?v=1ced2268" />
+  <link rel="stylesheet" href="web/biblioteca/am.css?v=ded1f2a0" />
 </head>
 <body>
 
@@ -89,6 +89,15 @@
           <span class="am-conta" id="conta-lixo"></span>
         </button>
       </nav>
+
+      <div class="am-pastas-titulo">
+        <span class="am-sobre">Pastas</span>
+        <button type="button" id="btn-nova-pasta" title="Nova pasta"
+                aria-label="Nova pasta">
+          <span class="am-icone am-icone-16 i-nova" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div id="pastas"></div>
 
       <div class="am-empurra"></div>
       <hr />
@@ -300,6 +309,52 @@
     </div>
   </dialog>
 
+  <!-- ══ PASTA: criar, renomear, apagar ════════════════════════════════ -->
+  <dialog id="janela-pasta" aria-labelledby="titulo-pasta">
+    <form id="form-pasta" method="dialog">
+      <div class="am-janela-cabeca">
+        <h2 id="titulo-pasta">Nova pasta</h2>
+        <button type="button" class="am-botao am-botao-fantasma"
+                data-fechar="janela-pasta" aria-label="Fechar">
+          <span class="am-icone i-fechar" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="am-janela-corpo">
+        <div class="am-campo" style="margin:0">
+          <label for="nome-pasta">Nome da pasta</label>
+          <input id="nome-pasta" required maxlength="40" autocomplete="off"
+                 placeholder="Clientes, Fornecedores, Estado…" />
+        </div>
+        <p class="am-msg" id="msg-pasta"></p>
+      </div>
+
+      <div class="am-janela-pe">
+        <button type="button" class="am-botao am-botao-linha" id="btn-apagar-pasta" hidden>
+          <span class="am-icone i-lixo" aria-hidden="true"></span>Apagar pasta
+        </button>
+        <button type="submit" class="am-botao" id="btn-guardar-pasta">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ══ MOVER PARA ════════════════════════════════════════════════════ -->
+  <dialog id="janela-mover" aria-labelledby="titulo-mover">
+    <div class="am-janela-cabeca">
+      <h2 id="titulo-mover">Mover para</h2>
+      <button type="button" class="am-botao am-botao-fantasma"
+              data-fechar="janela-mover" aria-label="Fechar">
+        <span class="am-icone i-fechar" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="am-janela-corpo">
+      <div class="am-escolha" id="escolha-pasta"></div>
+      <p class="am-ajuda">
+        Arrumar é só seu: quem está do outro lado não vê a mensagem mudar de sítio.
+      </p>
+    </div>
+  </dialog>
+
   <!-- ══ CONFIRMAR ═════════════════════════════════════════════════════
        Apagar de vez não tem volta. Uma janela nossa e não o confirm() do
        browser: a seguir a um ecrã desenhado, uma caixa cinzenta do sistema
@@ -328,6 +383,6 @@
   <script src="https://projetoempresaficticia.github.io/pp-base/web/comum.js"></script>
   <script src="web/biblioteca/am.js?v=5f271a58"></script>
   <script src="web/atualizar.js?v=aa6e1041"></script>
-  <script src="app.js?v=7d03a3a2"></script>
+  <script src="app.js?v=381ef25c"></script>
 </body>
 </html>

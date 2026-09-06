@@ -20,6 +20,8 @@ const msgGeral = document.getElementById('msg-geral');
 const estado = {
   eu: null,
   caixa: 'entrada',
+  pasta: null,        // uuid quando a caixa aberta é uma pasta
+  pastas: [],
   procura: '',
   soPorLer: false,
   linhas: [],
@@ -35,6 +37,7 @@ function desenharLista() {
       : estado.soPorLer ? 'Não há nada por ler.'
       : estado.caixa === 'enviados' ? 'Ainda não enviou nenhuma mensagem.'
       : estado.caixa === 'lixo' ? 'O lixo está vazio.'
+      : estado.caixa === 'pasta' ? 'Esta pasta está vazia.'
       : 'A caixa de entrada está vazia.'}</p>`;
     return;
   }
@@ -70,6 +73,12 @@ function desenharLista() {
           </span>
         </span>
         </button>
+        ${noLixo ? '' : `
+          <button type="button" class="am-item-accao" data-mover="${esc(m.id)}"
+                  data-repor="true" title="Mover para uma pasta"
+                  aria-label="Mover — ${esc(m.assunto)}">
+            <span class="am-icone am-icone-16 i-pasta" aria-hidden="true"></span>
+          </button>`}
         <button type="button" class="am-item-accao" data-arrumar="${esc(m.id)}"
                 data-destino="${noLixo ? 'caixa' : 'lixo'}"
                 data-repor="${noLixo}"
@@ -87,6 +96,9 @@ function desenharLista() {
   elLista.querySelectorAll('[data-arrumar]').forEach((b) => {
     b.addEventListener('click', () => arrumar([b.dataset.arrumar], b.dataset.destino));
   });
+  elLista.querySelectorAll('[data-mover]').forEach((b) => {
+    b.addEventListener('click', () => abrirMover([b.dataset.mover]));
+  });
 }
 
 function marcarConta(porLer, noLixo) {
@@ -102,6 +114,7 @@ async function carregar(manterAberta) {
     p_caixa: estado.caixa,
     p_procura: estado.procura || null,
     p_so_por_ler: estado.soPorLer,
+    p_pasta: estado.pasta,
   });
   if (!r.ok) {
     elLista.innerHTML = `<p class="am-vazio">${esc(r.erro)}</p>`;
@@ -109,12 +122,171 @@ async function carregar(manterAberta) {
   }
   estado.eu = r.dados.eu;
   estado.linhas = r.dados.linhas;
+  estado.pastas = r.dados.pastas || [];
   marcarConta(r.dados.por_ler, r.dados.no_lixo);
+  desenharPastas();
   if (!manterAberta) {
     estado.abertaId = null;
     limparLeitura();
   }
   desenharLista();
+}
+
+// ── pastas ─────────────────────────────────────────────────────────
+// A pasta é de quem arruma, não da mensagem: arquivar em "Clientes" não
+// muda nada para quem está do outro lado. É a mesma regra do apagar.
+const elPastas = document.getElementById('pastas');
+
+function desenharPastas() {
+  if (!estado.pastas.length) {
+    elPastas.innerHTML = '<p class="am-sem-pastas">Ainda não tem pastas.</p>';
+    return;
+  }
+  elPastas.innerHTML = estado.pastas.map((f) => `
+    <div class="am-pasta">
+      <button type="button" class="am-nav" data-pasta="${esc(f.id)}"
+              ${estado.caixa === 'pasta' && estado.pasta === f.id
+                ? 'aria-current="true"' : ''}>
+        <span class="am-icone i-pasta" aria-hidden="true"></span>
+        <span>${esc(f.nome)}</span>
+        <span class="am-conta">${f.por_ler > 0 ? f.por_ler : ''}</span>
+      </button>
+      <button type="button" class="am-pasta-gerir" data-gerir="${esc(f.id)}"
+              title="Renomear ou apagar" aria-label="Gerir a pasta ${esc(f.nome)}">
+        <span class="am-icone am-icone-16 i-definicoes" aria-hidden="true"></span>
+      </button>
+    </div>`).join('');
+
+  elPastas.querySelectorAll('[data-pasta]').forEach((b) => {
+    b.addEventListener('click', () => trocarCaixa('pasta', b.dataset.pasta));
+  });
+  elPastas.querySelectorAll('[data-gerir]').forEach((b) => {
+    b.addEventListener('click', () => abrirJanelaPasta(b.dataset.gerir));
+  });
+}
+
+// ── criar, renomear, apagar uma pasta ──────────────────────────────
+const janelaPasta = document.getElementById('janela-pasta');
+const campoNomePasta = document.getElementById('nome-pasta');
+const msgPasta = document.getElementById('msg-pasta');
+let pastaEmEdicao = null;
+
+function abrirJanelaPasta(id) {
+  pastaEmEdicao = id || null;
+  const f = estado.pastas.find((x) => x.id === id);
+  document.getElementById('titulo-pasta').textContent =
+    pastaEmEdicao ? 'Pasta' : 'Nova pasta';
+  document.getElementById('btn-apagar-pasta').hidden = !pastaEmEdicao;
+  campoNomePasta.value = f ? f.nome : '';
+  mostrarMsg(msgPasta, '');
+  abrirJanela('janela-pasta');
+  campoNomePasta.focus();
+  campoNomePasta.select();
+}
+
+document.getElementById('btn-nova-pasta')
+  .addEventListener('click', () => abrirJanelaPasta(null));
+
+document.getElementById('form-pasta').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('btn-guardar-pasta');
+  btn.disabled = true;
+  const r = await api('correio_pasta_guardar', {
+    p_id: pastaEmEdicao,
+    p_nome: campoNomePasta.value,
+  });
+  btn.disabled = false;
+  if (!r.ok) {
+    mostrarMsg(msgPasta, r.erro, 'erro');
+    return;
+  }
+  janelaPasta.close();
+  await carregar(true);
+});
+
+document.getElementById('btn-apagar-pasta').addEventListener('click', async () => {
+  const f = estado.pastas.find((x) => x.id === pastaEmEdicao);
+  if (!f) return;
+
+  const sim = await perguntar(
+    `Apagar a pasta "${f.nome}"?`,
+    f.total > 0
+      ? `As ${f.total} mensagens que lá estão voltam à Entrada. Nenhuma é apagada.`
+      : 'A pasta está vazia. Nenhuma mensagem é apagada.');
+  if (!sim) return;
+
+  const r = await api('correio_pasta_apagar', { p_id: pastaEmEdicao });
+  if (!r.ok) {
+    mostrarMsg(msgPasta, r.erro, 'erro');
+    return;
+  }
+  janelaPasta.close();
+  // Estávamos a olhar para uma pasta que já não existe.
+  if (estado.caixa === 'pasta' && estado.pasta === pastaEmEdicao) {
+    trocarCaixa('entrada');
+  } else {
+    await carregar(true);
+  }
+  if (r.dados.voltaram > 0) {
+    mostrarMsg(msgGeral,
+      `Pasta apagada. ${r.dados.voltaram} mensagem(ns) voltaram à Entrada.`, 'ok');
+  }
+});
+
+// ── mover mensagens para uma pasta ─────────────────────────────────
+const janelaMover = document.getElementById('janela-mover');
+let aMover = [];
+
+function abrirMover(ids) {
+  aMover = ids;
+  const actual = ids.length === 1
+    ? (estado.linhas.find((m) => m.id === ids[0]) || {}).pasta
+    : undefined;
+
+  const caixa = document.getElementById('escolha-pasta');
+  const linhas = [`
+    <button type="button" data-destino="" ${!actual ? 'aria-current="true"' : ''}>
+      <span class="am-icone i-envelope" aria-hidden="true"></span>
+      <span>Entrada / Enviados</span>
+      ${!actual ? '<span class="aqui">está aqui</span>' : ''}
+    </button>`];
+
+  if (!estado.pastas.length) {
+    linhas.push('<p class="am-ajuda">Ainda não tem pastas. Crie uma na barra lateral.</p>');
+  }
+  estado.pastas.forEach((f) => {
+    linhas.push(`
+      <button type="button" data-destino="${esc(f.id)}"
+              ${actual === f.id ? 'aria-current="true"' : ''}>
+        <span class="am-icone i-pasta" aria-hidden="true"></span>
+        <span>${esc(f.nome)}</span>
+        ${actual === f.id ? '<span class="aqui">está aqui</span>' : ''}
+      </button>`);
+  });
+  caixa.innerHTML = linhas.join('');
+
+  caixa.querySelectorAll('[data-destino]').forEach((b) => {
+    b.addEventListener('click', () => mover(b.dataset.destino || null));
+  });
+
+  document.getElementById('titulo-mover').textContent =
+    ids.length > 1 ? `Mover ${ids.length} mensagens para` : 'Mover para';
+  abrirJanela('janela-mover');
+}
+
+async function mover(pasta) {
+  const r = await api('correio_mover', { p_ids: aMover, p_pasta: pasta });
+  janelaMover.close();
+  if (!r.ok) {
+    mostrarMsg(msgGeral, r.erro, 'erro');
+    return;
+  }
+  // A mensagem aberta pode ter saído da caixa que está no ecrã.
+  if (aMover.indexOf(estado.abertaId) >= 0) {
+    estado.abertaId = null;
+    limparLeitura();
+  }
+  await carregar(true);
 }
 
 // ── arrumar: apagar, repor, apagar de vez ──────────────────────────
@@ -291,6 +463,9 @@ async function abrir(id) {
           <button type="button" class="am-botao am-botao-linha" id="btn-por-ler">
             <span class="am-icone i-envelope" aria-hidden="true"></span>Marcar por ler
           </button>` : ''}
+        <button type="button" class="am-botao am-botao-linha" id="btn-mover-um">
+          <span class="am-icone i-pasta" aria-hidden="true"></span>Mover para
+        </button>
         <button type="button" class="am-botao am-botao-linha" data-arrumar-um="lixo">
           <span class="am-icone i-lixo" aria-hidden="true"></span>Apagar
         </button>`}
@@ -324,6 +499,9 @@ async function abrir(id) {
   elLeitura.querySelectorAll('[data-arrumar-um]').forEach((b) => {
     b.addEventListener('click', () => arrumar([m.id], b.dataset.arrumarUm));
   });
+
+  const btnMover = document.getElementById('btn-mover-um');
+  if (btnMover) btnMover.addEventListener('click', () => abrirMover([m.id]));
 
   // Abrir é ler. Marca-se depois de mostrar, para o ecrã não esperar pela rede.
   // No lixo não: passar os olhos pelo que se deitou fora não é ler.
@@ -911,14 +1089,24 @@ document.getElementById('form-nova').addEventListener('submit', async (ev) => {
 });
 
 // ── caixas, procura, filtro ────────────────────────────────────────
-function trocarCaixa(caixa) {
+function trocarCaixa(caixa, pasta) {
   estado.caixa = caixa;
+  estado.pasta = caixa === 'pasta' ? (pasta || null) : null;
+
   document.querySelectorAll('.am-nav[data-caixa]').forEach((b) => {
     b.setAttribute('aria-current', String(b.dataset.caixa === caixa));
   });
+  document.querySelectorAll('.am-nav[data-pasta]').forEach((b) => {
+    b.setAttribute('aria-current',
+      String(caixa === 'pasta' && b.dataset.pasta === estado.pasta));
+  });
+
+  const f = estado.pastas.find((x) => x.id === estado.pasta);
   const titulos = { enviados: 'Enviados', lixo: 'Lixo', entrada: 'Entrada' };
-  document.getElementById('titulo-caixa').textContent = titulos[caixa] || 'Entrada';
-  // "Só por ler" não quer dizer nada nos enviados nem no lixo.
+  document.getElementById('titulo-caixa').textContent =
+    caixa === 'pasta' ? (f ? f.nome : 'Pasta') : (titulos[caixa] || 'Entrada');
+
+  // "Só por ler" não quer dizer nada fora da Entrada.
   document.getElementById('rotulo-por-ler').hidden = caixa !== 'entrada';
   document.getElementById('btn-esvaziar').hidden = caixa !== 'lixo';
   carregar(false);

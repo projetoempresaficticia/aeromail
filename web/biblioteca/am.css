@@ -97,6 +97,7 @@ a { color: var(--am-primaria); }
 .i-ajuda        { --i: url(../icones/info-circle.svg); }
 .i-descarregar  { --i: url(../icones/download-2.svg); }
 .i-voltar       { --i: url(../icones/left-2.svg); }
+.i-pasta        { --i: url(../icones/folder.svg); }
 .i-imagem       { --i: url(../icones/image.svg); }
 .i-documento    { --i: url(../icones/document.svg); }
 .i-ligacao      { --i: url(../icones/link.svg); }
@@ -454,3 +455,51 @@ a.am-anexo:hover, button.am-anexo:hover {
   font-size: 13px; line-height: 1.5;
 }
 .am-nota .am-icone { margin-top: 1px; flex-shrink: 0; }
+
+/* ── pastas na lateral ─────────────────────────────────────────────
+   Uma linha com dois botões: abrir a pasta e geri-la. O de gerir só
+   aparece ao passar por cima — mas num ecrã sem rato não há "por cima",
+   por isso lá fica sempre. */
+.am-pastas-titulo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--am-e4) var(--am-e3) var(--am-e2);
+}
+.am-pastas-titulo button {
+  display: inline-grid; place-items: center; width: 26px; height: 26px;
+  border: 0; border-radius: 50%; background: transparent;
+  color: var(--am-primaria); cursor: pointer;
+}
+.am-pastas-titulo button:hover { background: var(--am-selecionado); }
+.am-pasta { display: flex; align-items: center; gap: 2px; }
+.am-pasta > .am-nav { flex: 1; min-width: 0; }
+.am-pasta > .am-nav > span:not(.am-icone):not(.am-conta) {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.am-pasta-gerir {
+  display: inline-grid; place-items: center; width: 26px; height: 26px;
+  flex-shrink: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--am-secundario); cursor: pointer; opacity: 0;
+  transition: opacity 100ms ease;
+}
+.am-pasta:hover .am-pasta-gerir,
+.am-pasta-gerir:focus-visible { opacity: 1; }
+.am-pasta-gerir:hover { background: var(--am-selecionado); color: var(--am-primaria); }
+@media (hover: none) { .am-pasta-gerir { opacity: 1; } }
+.am-sem-pastas { padding: var(--am-e2) var(--am-e3); font-size: 12.5px;
+                 color: var(--am-secundario); }
+
+/* ── escolher a pasta para onde mover ──────────────────────────────── */
+.am-escolha { display: flex; flex-direction: column; gap: var(--am-e2); }
+.am-escolha button {
+  display: flex; align-items: center; gap: var(--am-e3); width: 100%;
+  padding: 11px var(--am-e4); border: 1px solid var(--am-borda);
+  border-radius: var(--am-r); background: var(--am-superficie);
+  font: 500 14.5px/1 var(--am-fonte); color: var(--am-tinta);
+  cursor: pointer; text-align: left;
+}
+.am-escolha button:hover { background: var(--am-selecionado); border-color: var(--am-primaria); }
+.am-escolha button[aria-current="true"] {
+  background: var(--am-selecionado); border-color: var(--am-primaria);
+  color: var(--am-primaria); font-weight: 600;
+}
+.am-escolha .aqui { margin-left: auto; font-size: 12px; color: var(--am-secundario); }
